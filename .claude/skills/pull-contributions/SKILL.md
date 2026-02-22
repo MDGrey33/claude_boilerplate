@@ -11,7 +11,7 @@ You are integrating generalized contributions from a project into this boilerpla
 
 ## Steps
 
-1. **Locate contributions**: The user provides a path to a project's `.claude/contributions/` folder (e.g., `/Users/me/code/my-project/.claude/contributions/`). Read all `.md` files in that folder.
+1. **Locate contributions**: The user provides a path to a project's `.claude/contributions/` folder (e.g., `~/code/my-project/.claude/contributions/`). Read all `.md` files in that folder.
 
    If no path is provided, ask the user for it.
 

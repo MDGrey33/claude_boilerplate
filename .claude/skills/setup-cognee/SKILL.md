@@ -272,8 +272,9 @@ uv sync --dev --all-extras --reinstall
 {
   "mcpServers": {
     "cognee": {
-      "command": "$HOME/cognee/cognee-mcp/.venv/bin/python",
-      "args": ["$HOME/cognee/cognee-mcp/src/server.py"],
+      "__comment__": "Replace paths below with the actual absolute path to your cognee clone",
+      "command": "/absolute/path/to/cognee/cognee-mcp/.venv/bin/python",
+      "args": ["/absolute/path/to/cognee/cognee-mcp/src/server.py"],
       "env": {
         "LLM_API_KEY": "${LLM_API_KEY}",
         "DB_PROVIDER": "postgres",

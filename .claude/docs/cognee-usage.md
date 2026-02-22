@@ -52,7 +52,7 @@ cognee_list_datasets()
 
 ### Storing a session summary
 ```
-1. cognee_add(text="Session summary: Implemented user auth with JWT...")
+1. cognee_add(text="Session summary: Added pagination to the /users endpoint, fixed N+1 query in orders list")
 2. cognee_cognify()
 ```
 
