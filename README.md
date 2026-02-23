@@ -6,10 +6,10 @@ Persistent memory and session management for Claude Code, powered by [cognee](ht
 
 - **Dual memory**: Markdown files for fast, deterministic access + Cognee knowledge graph for semantic retrieval
 - **Session management**: `/hello` loads context at start, `/bye` persists it at end
-- **Lessons learned**: Automatically captures mistakes, conventions, and patterns
-- **Self-improving skills**: `/skills-manager` proposes skill updates based on lessons
+- **Lessons learned**: Captures mistakes, conventions, and patterns during session wrap-up
+- **Skills lifecycle**: `/skills-manager` adds, updates, removes, and reviews skills based on lessons or requests
 - **MCP health monitoring**: `/mcp-doctor` checks connectivity
-- **Boilerplate contributions**: `/contribute` generalizes project lessons for the shared boilerplate
+- **Boilerplate contributions**: `/contribute` generalizes project lessons; `/pull-contributions` integrates them back into the boilerplate
 
 ## Quick Start
 
@@ -85,14 +85,14 @@ The default `.mcp.json` is pre-configured for this setup (uvx + Postgres). Graph
 
 | Skill | Trigger | Purpose |
 |-------|---------|---------|
-| `/hello` | Manual | Load session context, check MCP health, recap last session |
+| `/hello` | Manual | Start a session — load context, check MCP health, recap last session |
 | `/bye` | Manual | Summarize session, capture lessons, persist to memory + cognee |
 | `/lessons` | Auto (via `/bye`) or manual | Categorize and store lessons learned |
 | `/skills-manager` | Auto (via `/lessons`) or manual | Add, update, remove, and review skills |
 | `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers |
 | `/contribute` | Manual | Generalize a lesson and stage it in `.claude/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
-| `/setup-cognee` | Manual | Install and configure cognee-mcp on a new machine |
+| `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine |
 
 ### Skill Chains
 

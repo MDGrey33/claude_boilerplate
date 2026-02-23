@@ -31,7 +31,7 @@ Run `/setup-cognee` for full guided installation (includes PostgreSQL, uv, etc.)
 | `/mcp-doctor` | Check health of configured MCP servers |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
-| `/setup-cognee` | Install and configure cognee-mcp on a new machine |
+| `/setup-cognee` | Install and configure cognee-mcp on this machine |
 
 ### Skill chains (automatic)
 - `/hello` → `/mcp-doctor`
