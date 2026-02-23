@@ -13,23 +13,33 @@ Persistent memory and session management for Claude Code, powered by [cognee](ht
 
 ## Quick Start
 
-### 1. Copy into your project
+### 1. Add boilerplate to your project
 
+**New project:**
 ```bash
-# Copy all boilerplate files (recommended)
-cp -r cognee-boilerplate/. /path/to/your/project/
-cd /path/to/your/project
-rm -rf .git
-git init
+git clone https://github.com/MDGrey33/claude_boilerplate.git my-project
+cd my-project
 ```
+Then update the git remote to point to your own repository.
 
-Or copy individual pieces:
-```bash
-cp -r cognee-boilerplate/.claude /path/to/your/project/
-cp cognee-boilerplate/CLAUDE.md /path/to/your/project/
-cp cognee-boilerplate/.mcp.json /path/to/your/project/
-cp cognee-boilerplate/.gitignore /path/to/your/project/
-```
+**Existing project — let Claude Code handle it:**
+
+The safest way to add this boilerplate to an existing project is to ask Claude Code directly:
+
+> "Install the cognee boilerplate from /path/to/claude_boilerplate into this project"
+
+Claude Code will merge files carefully — preserving your existing `.mcp.json` entries, `.gitignore` rules, and other config rather than overwriting them.
+
+**Existing project — manual (advanced):**
+
+If you prefer to do it yourself, copy these files into your project. **Do not** use `cp -r` blindly — it can overwrite your existing config.
+
+| Source | Notes |
+|--------|-------|
+| `.claude/` directory | Copy the entire directory. If you already have `.claude/`, merge the contents. |
+| `CLAUDE.md` | If you have an existing `CLAUDE.md`, merge the sections rather than replacing it. |
+| `.mcp.json` | **Merge, don't overwrite.** If you have existing MCP servers configured, add the `cognee` entry to your existing file. |
+| `.gitignore` | Append any missing entries to your existing `.gitignore`. |
 
 ### 2. Set up Cognee
 
@@ -78,7 +88,7 @@ The default `.mcp.json` is pre-configured for this setup (uvx + Postgres). Graph
 | `/hello` | Manual | Load session context, check MCP health, recap last session |
 | `/bye` | Manual | Summarize session, capture lessons, persist to memory + cognee |
 | `/lessons` | Auto (via `/bye`) or manual | Categorize and store lessons learned |
-| `/skills-manager` | Auto (via `/lessons`) or manual | Research and propose skill improvements |
+| `/skills-manager` | Auto (via `/lessons`) or manual | Add, update, remove, and review skills |
 | `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers |
 | `/contribute` | Manual | Generalize a lesson and stage it in `.claude/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
@@ -159,6 +169,5 @@ The memory files are plain markdown. Add new files or sections as needed. Update
 ## Requirements
 
 - [Claude Code](https://claude.ai/code) CLI
-- Python 3.10+ (for cognee-mcp via uvx) or Docker
 - An LLM API key (OpenAI recommended for cognee)
-- Docker (recommended, for PostgreSQL + PGVector)
+- Docker (recommended, for PostgreSQL + PGVector) — or use the minimal file-based setup with no Docker

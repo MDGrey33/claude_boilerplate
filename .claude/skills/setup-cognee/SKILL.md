@@ -11,6 +11,13 @@ You are helping the user get cognee-mcp running on their machine. Walk through s
 
 ## Steps
 
+### 0. Check Latest Documentation
+
+Before executing any installation steps, search the web for the latest cognee-mcp documentation:
+- Search for "cognee-mcp installation" and "cognee-mcp setup" to find current instructions
+- Check the [cognee-mcp GitHub repo](https://github.com/topoteretes/cognee) for recent changes to installation steps, dependencies, or configuration
+- If the latest docs differ from the steps below (e.g., new environment variables, changed Docker images, updated uvx package names), **adapt your plan accordingly** and inform the user of any differences
+
 ### 1. Detect Environment
 
 Check what's available on this machine (run these in parallel):
