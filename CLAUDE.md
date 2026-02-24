@@ -14,20 +14,16 @@ This project uses **cognee** for persistent semantic memory alongside markdown-b
 
 ## Prerequisites
 
-Cognee MCP requires `LLM_API_KEY` set in your shell environment. Add to `~/.zshrc` or `~/.bashrc`:
-```bash
-export LLM_API_KEY="your-openai-api-key"
-```
-Run `/setup-cognee` for full guided installation (includes PostgreSQL, uv, etc.).
+Run `/setup-cognee` for first-time installation and configuration. It detects your environment and walks you through everything.
 
 ## Available Skills
 
 | Skill | Purpose |
 |-------|---------|
-| `/hello` | Start a session — loads context, checks MCP health, recaps last session |
-| `/bye` | End a session — summarizes work, captures lessons, persists memory |
-| `/lessons` | Capture a lesson learned (auto-invoked by `/bye`, or use manually) |
-| `/skills-manager` | Add, update, remove, and review skills (auto-invoked by `/lessons`, or use manually) |
+| `/hello` | Start a new session — loads context, checks MCP health, recaps last session |
+| `/bye` | End the session — summarize work, capture lessons, persist memory |
+| `/lessons` | Capture and integrate lessons learned (auto-invoked by `/bye`, or use manually) |
+| `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
 | `/mcp-doctor` | Check health of configured MCP servers |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |

@@ -64,26 +64,8 @@ After calling `cognee_cognify`, the knowledge graph processing runs asynchronous
 
 All skills gracefully degrade when cognee MCP is down. Markdown memory files (`.claude/memory/`) serve as the primary persistent store. Cognee adds semantic search over accumulated knowledge but is not required for basic operation.
 
-## Infrastructure
-
-The recommended setup uses:
-- **cognee-mcp via uvx** — managed by Claude Code, no manual server management
-- **PostgreSQL + PGVector** — single Docker container for relational + vector storage (no file locking)
-- **Kuzu** — embedded graph DB, in-process, zero config
-
-Start Postgres if not running:
-```bash
-docker run -d --name cognee-postgres \
-  -e POSTGRES_USER=cognee -e POSTGRES_PASSWORD=cognee -e POSTGRES_DB=cognee_db \
-  -p 5432:5432 --restart unless-stopped pgvector/pgvector:pg17
-```
-
-Run `/setup-cognee` for full guided setup on a new machine.
-
 ## Troubleshooting
 
 - **MCP not connecting**: Run `/mcp-doctor` for diagnostics, then `/setup-cognee` if needed
 - **No results from search**: Ensure you've run `cognee_cognify` after adding data
 - **Slow responses**: Cognee processes data asynchronously; wait a moment after cognify
-- **Connection refused on port 5432**: Check `docker ps` — is cognee-postgres running?
-- **File locking errors**: You're likely on the minimal (SQLite/LanceDB) setup. Run `/setup-cognee recommended` to upgrade to Postgres.
