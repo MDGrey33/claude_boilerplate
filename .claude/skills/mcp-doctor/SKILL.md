@@ -6,32 +6,50 @@ user_invocable: true
 
 # MCP Doctor
 
-You are performing a health check on configured MCP servers.
+You are performing a health check on all configured MCP servers using direct process-level testing (not MCP tool calls, which require a loaded session).
 
 ## Steps
 
-1. **Read MCP configuration**: Read `.mcp.json` from the project root to discover configured MCP servers and their setup details.
+1. **Read MCP configuration**: Read `.mcp.json` from the project root to discover all configured MCP servers, their transport type, and their setup details.
 
-2. **Determine setup type from config**: Inspect the cognee entry in `.mcp.json` to understand what kind of setup is configured:
-   - If `command` is `docker` → Docker-based setup
-   - If `command` points to a Python binary path → local clone setup
-   - If `url` is set → HTTP/SSE transport setup
-   - Note the actual paths, images, network names, and env vars configured
+2. **Classify each server**: For each entry in `.mcp.json`, determine the transport:
+   - **stdio** — has `command` and `args` fields (e.g., cognee with a Python binary, playwright with `npx`)
+   - **HTTP/SSE** — has a `url` field
 
-3. **Check each server**: For each configured MCP server, run a lightweight health check:
-   - **cognee**: Call the `cognee_list_datasets` MCP tool. If it returns a response (even an empty list), the server is healthy. If it errors or times out, it's unhealthy.
-   - For any other MCP servers: attempt to list their available tools. If tools are returned, the server is healthy.
+3. **Health-check each server via its native transport**: Do NOT call MCP tools (they require the server to already be loaded in the Claude Code session). Instead, test connectivity directly:
 
-4. **Report results**: Present a status table:
+   **For stdio servers using Python** (command points to a Python binary):
+   - Write and run a short Python script using the **same Python binary** from the server's `command` field
+   - The script should import `mcp.ClientSession`, `StdioServerParameters`, and `stdio_client` from the MCP Python SDK
+   - It should connect to the server using the `command`, `args`, and `env` from `.mcp.json`
+   - On successful connection: call `initialize()`, then `list_tools()`, print the tool count and tool names
+   - On failure: print the error message
+   - Use a reasonable timeout (15 seconds) so it doesn't hang
+
+   **For stdio servers using npx/node** (e.g., playwright):
+   - Write and run a similar connection test, but use the Node.js MCP SDK or simply attempt to start the process and read its initial stdio output
+   - Alternatively, run the configured command with a short timeout and check that it starts without error
+
+   **For HTTP/SSE servers** (url is set):
+   - Use the MCP Python SDK's SSE or streamable HTTP client to connect, or fall back to a simple HTTP reachability check against the configured URL
+   - Report whether the endpoint responds
+
+   **Key principle**: This skill describes *what to do*. You generate the actual test scripts on the fly based on what you find in `.mcp.json`. Do not use pre-baked scripts.
+
+4. **Report results**: Present a status table covering ALL configured servers:
 
    ```
    MCP Health Report
-   -----------------
-   cognee:  healthy / unhealthy / not configured
-   Setup:   local clone / docker / http
+   ─────────────────
+   Server        Status     Transport  Tools
+   cognee        healthy    stdio      23 tools
+   playwright    healthy    stdio      12 tools
+   other-server  unhealthy  http       (connection refused)
    ```
 
-5. **If unhealthy**, troubleshoot based on the actual config found in `.mcp.json`:
+   If a server is healthy, show the tool count. If unhealthy, show the error summary.
+
+5. **If any server is unhealthy**, troubleshoot based on the actual config found in `.mcp.json`:
 
    **For local clone setups** (command points to a Python path):
    - Verify the configured Python binary exists at the path shown in `command`
@@ -50,9 +68,13 @@ You are performing a health check on configured MCP servers.
    - Check that the URL is reachable
    - Check that the service is running at the configured host/port
 
+   **For npx-based servers** (e.g., playwright):
+   - Verify `npx` is available and the package can be resolved
+   - Check Node.js version if relevant
+
    **General checks** (all setups):
-   - Verify `LLM_API_KEY` is present and looks like a real key (not empty, not a placeholder)
-   - If all else fails, suggest running `/setup-cognee` for a fresh configuration
+   - Verify `LLM_API_KEY` is present and looks like a real key (not empty, not a placeholder) — for servers that need it
+   - If all else fails, suggest running the relevant setup skill (e.g., `/setup-cognee`, `/setup-playwright-mcp`)
 
    **Do not hardcode any paths** — derive everything from what's actually in `.mcp.json`.
 

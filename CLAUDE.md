@@ -28,11 +28,13 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine |
+| `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
 
 ### Skill chains (automatic)
 - `/hello` → `/mcp-doctor`
 - `/bye` → `/lessons` → `/skills-manager`
 - `/setup-cognee` → `/mcp-doctor`
+- `/setup-playwright-mcp` → `/mcp-doctor`
 
 ## Workflow
 
