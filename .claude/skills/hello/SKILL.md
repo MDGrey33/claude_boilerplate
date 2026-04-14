@@ -36,10 +36,13 @@ You are starting a new working session. Load context and orient the user.
    Identity: [loaded / not set up yet — will build over time]
    ```
 
-6. **Wait for the user's first message.** Do NOT ask "which workstream?" or present a menu. The user will tell you what they want to work on.
+6. **Ask what the user is working on**: After the summary, ask:
+   - If a previous workstream exists in `latest-session.md`: "Last time you were working on [workstream name]. Want to continue that, or working on something else today?"
+   - If no previous workstream: "What are you working on today?"
 
-7. **Lazy-load workstream**: When the user states what they want to work on:
-   - List files in `.claude/memory/workstreams/` and check if any match the topic
-   - If a match exists, read that workstream file silently
-   - If no match, create a new workstream file. If the scope is ambiguous, ask one clarifying question to name it well (this only happens once per new workstream)
-   - If the user explicitly says "continue" with no further context, load the workstream noted in `latest-session.md`
+7. **Resolve workstream**: Based on the user's answer:
+   - If they want to continue the last workstream, load it from `.claude/memory/workstreams/`
+   - If they describe something new, list files in `.claude/memory/workstreams/` and check if any match the topic
+     - If a match exists, confirm: "Looks like this relates to [workstream name] — shall I load that, or create a new one?"
+     - If no match, create a new workstream file. If the scope is ambiguous, ask one clarifying question to name it well.
+   - The active workstream is now set for this session. `/bye` will use it without guessing.
