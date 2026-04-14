@@ -24,7 +24,7 @@ You are performing a health check on all configured MCP servers using direct pro
    - It should connect to the server using the `command`, `args`, and `env` from `.mcp.json`
    - On successful connection: call `initialize()`, then `list_tools()`, print the tool count and tool names
    - On failure: print the error message
-   - Use a reasonable timeout (15 seconds) so it doesn't hang
+   - Use a reasonable timeout (30 seconds) so it doesn't hang — heavier servers with many tools need more time to enumerate
 
    **For stdio servers using npx/node** (e.g., playwright):
    - Write and run a similar connection test, but use the Node.js MCP SDK or simply attempt to start the process and read its initial stdio output
