@@ -30,7 +30,9 @@ You are starting a new working session. Load context and orient the user.
    Session Start
    =============
    Last session: [brief recap or "No previous sessions"]
-   Open items: [list or "None"]
+   Open items: [grouped by workstream — cross-reference `.claude/memory/workstreams/`
+                files if latest-session.md has a flat list; never present all items
+                as belonging to the last active workstream]
    MCP status: [cognee: healthy/unhealthy, other servers]
    Lessons active: [count] conventions, [count] patterns
    Identity: [loaded / not set up yet — will build over time]
