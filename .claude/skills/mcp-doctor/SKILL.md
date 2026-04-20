@@ -6,9 +6,57 @@ user_invocable: true
 
 # MCP Doctor
 
-You are performing a health check on all configured MCP servers using direct process-level testing (not MCP tool calls, which require a loaded session).
+You are performing a health check on all configured MCP servers.
 
-## Steps
+This skill has two modes:
+
+- **Session mode** (default) — fast check based on tools already loaded in the current Claude Code session. Used by `/hello` and for routine verification.
+- **Deep mode** (`--deep`) — process-level connectivity tests for diagnosing missing or broken servers.
+
+---
+
+## Session Mode (default)
+
+Use this when invoked by `/hello` or standalone without `--deep`.
+
+1. **Read `.mcp.json`** to get the list of configured local servers and their names.
+
+2. **Enumerate session tools**: Identify all `mcp__<server>__<tool>` tool names visible in the current session. Group them by server prefix (the part between `mcp__` and `__<tool>`).
+
+3. **Cross-reference with `.mcp.json`**: For each server configured in `.mcp.json`, check whether any tools with its prefix appear in the session.
+   - If tools are present → **HEALTHY**
+   - If no tools are present → **ABSENT** (yellow flag, not a hard error — the server may have failed to connect)
+
+4. **Identify claude.ai integrations**: Group all `mcp__claude_ai_<Name>__*` tools as a separate "Claude.ai Integrations" section — these are not in `.mcp.json`.
+   - If a claude.ai integration has only `authenticate` and `complete_authentication` tools → label as **auth-only** (OAuth flow required before full tools are available)
+   - Otherwise → **connected**
+
+5. **Report a unified status table**:
+
+   ```
+   MCP Health — Session
+   ─────────────────────────────────────────
+   Local Servers (.mcp.json)
+   Server        Status     Tools
+   cognee        HEALTHY    23 tools
+   playwright    HEALTHY    12 tools
+   other-server  ABSENT     —
+
+   Claude.ai Integrations
+   Integration   Status
+   Slack         connected (14 tools)
+   Gmail         auth-only (OAuth required)
+   ```
+
+6. **If any `.mcp.json` server is ABSENT**, offer: "Run `/mcp-doctor --deep` to diagnose why `<server>` failed to connect."
+
+7. **Return** the health status so calling skills (e.g., `/hello`) can use it.
+
+---
+
+## Deep Mode (`--deep`)
+
+Use this when a server is missing or broken and you need to diagnose why.
 
 1. **Read MCP configuration**: Read `.mcp.json` from the project root to discover all configured MCP servers, their transport type, and their setup details.
 
@@ -39,8 +87,8 @@ You are performing a health check on all configured MCP servers using direct pro
 4. **Report results**: Present a status table covering ALL configured servers:
 
    ```
-   MCP Health Report
-   ─────────────────
+   MCP Health Report — Deep
+   ─────────────────────────
    Server        Status     Transport  Tools
    cognee        healthy    stdio      23 tools
    playwright    healthy    stdio      12 tools

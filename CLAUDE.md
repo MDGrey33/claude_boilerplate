@@ -44,7 +44,7 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 | `/bye` | End the session — summarize work, capture lessons, persist memory |
 | `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
 | `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
-| `/mcp-doctor` | Check health of configured MCP servers |
+| `/mcp-doctor` | Check health of configured MCP servers (session mode by default; `--deep` for process-level diagnosis) |
 | `/collect-my-activity` | Collect user's daily activity from Slack, Jira, Confluence, GitHub, Drive |
 | `/collect-team-activity` | Collect a team member's daily activity (leadership roles) |
 | `/one-on-one-prep` | Synthesize a member's activity into 1:1 meeting prep |
@@ -58,7 +58,7 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 | `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |
 
 ### Skill chains (automatic)
-- `/hello` → `/mcp-doctor`
+- `/hello` → `/mcp-doctor` (session mode: enumerates loaded tools, no process spawning)
 - `/bye` → `/lessons` → `/skills-manager`
 - `/setup-cognee` → `/mcp-doctor`
 - `/setup-playwright-mcp` → `/mcp-doctor`

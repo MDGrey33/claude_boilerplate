@@ -35,7 +35,7 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 | `/bye` | Manual | End the session — summarize work, capture lessons, persist memory |
 | `/lessons` | Auto (via `/bye`) or manual | Capture lessons (default) OR `scan` recent session files / `scan --deep` raw JSONL for skill-change proposals |
 | `/skills-manager` | Auto (via `/lessons`) or manual | Manage skills — add, update, remove, and review |
-| `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers |
+| `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers — session mode by default; `--deep` for process-level diagnosis |
 | `/collect-my-activity` | Manual | Collect user's daily activity from Slack, Jira, Confluence, GitHub, Drive |
 | `/collect-team-activity` | Manual | Collect a team member's daily activity (leadership roles) |
 | `/one-on-one-prep` | Manual | Synthesize a member's activity into 1:1 meeting prep |
@@ -50,7 +50,7 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 ### Skill Chains
 
 ```
-/hello ──> /mcp-doctor
+/hello ──> /mcp-doctor (session mode)
 /bye ──> /lessons ──> /skills-manager
 /setup-cognee ──> /mcp-doctor
 /contribute ──> /sanitizer (blocks staging on any finding)
