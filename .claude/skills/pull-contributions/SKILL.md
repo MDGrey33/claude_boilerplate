@@ -1,9 +1,17 @@
 ---
 name: pull-contributions
-description: Pull generalized contributions from a project into the boilerplate
+description: Pull generalized contributions from a project into the boilerplate. Runs `sanitizer --check` as a mandatory gate before integration.
 user_invocable: true
 args: Path to a project's .claude/contributions/ folder
 ---
+
+## Model Selection
+
+See `~/.claude/skills/_shared/MODEL_SELECTION.md` for full policy.
+
+- **Default model:** Haiku 4.5 — mechanical file copy + path rewrite from project to boilerplate
+- **Promote to Sonnet when:** a contribution needs de-identification or rewording before merging
+- **Promote to Opus when:** never
 
 # Pull Contributions — Integrate Project Learnings into Boilerplate
 
@@ -15,8 +23,15 @@ You are integrating generalized contributions from a project into this boilerpla
 
    If no path is provided, ask the user for it.
 
-2. **Review each contribution**: For each contribution file, read it and verify:
-   - **Project-agnostic**: No project names, internal paths, domain-specific terms leaked. If you find any, flag them and suggest replacements.
+2. **Sanitize gate (MANDATORY)**: Run `sanitizer` in check mode on the contributions folder:
+   ```
+   /sanitizer <contributions-folder-path> --check --mode=boilerplate
+   ```
+   - Exit code `0` → proceed.
+   - Exit code `1` → **halt**. Surface the sanitizer report. Do NOT pull any contribution with findings. Ask the user to run `/sanitizer <path> --apply` in the source project to fix, then re-run this skill.
+   - Do not duplicate sanitization logic here — the sanitizer is the single source of truth for what leaks.
+
+3. **Review each contribution** (content check only, not PII/secret — that's sanitizer's job):
    - **Actionable**: The recommendation is concrete enough to apply.
    - **Categorized correctly**: The type and target file make sense.
 
