@@ -22,19 +22,24 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 |-------|---------|
 | `/hello` | Start a new session — loads context, checks MCP health, recaps last session |
 | `/bye` | End the session — summarize work, capture lessons, persist memory |
-| `/lessons` | Capture and integrate lessons learned (auto-invoked by `/bye`, or use manually) |
+| `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
 | `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
 | `/mcp-doctor` | Check health of configured MCP servers |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine |
 | `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
+| `/sanitizer` | Scrub a file/dir/glob for secrets, PII, private context, and tone risks before publishing. Auto-invoked by `/contribute` and `/pull-contributions`. Has a `--check` mode for pre-commit/CI gates. |
+| `/finance-controller` | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Produces a prioritized report; delegates execution to `skills-manager` or asks for approval. Use weekly or when sessions feel slow. |
+| `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |
 
 ### Skill chains (automatic)
 - `/hello` → `/mcp-doctor`
 - `/bye` → `/lessons` → `/skills-manager`
 - `/setup-cognee` → `/mcp-doctor`
 - `/setup-playwright-mcp` → `/mcp-doctor`
+- `/contribute` → `/sanitizer` (blocks staging on any finding)
+- `/pull-contributions` → `/sanitizer --check` (blocks pull on any finding)
 
 ## Workflow
 

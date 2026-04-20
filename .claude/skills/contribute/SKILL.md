@@ -1,9 +1,17 @@
 ---
 name: contribute
-description: Generalize a lesson and stage it for boilerplate contribution
+description: Generalize a lesson and stage it for boilerplate contribution. Delegates sanitization to `sanitizer` before staging.
 user_invocable: true
 args: Optional description of the lesson or improvement to generalize
 ---
+
+## Model Selection
+
+See `~/.claude/skills/_shared/MODEL_SELECTION.md` for full policy.
+
+- **Default model:** Sonnet 4.6 — generalizing a project-specific fix into a reusable pattern needs judgment about what's portable
+- **Promote to Sonnet when:** never — generalization is the core task
+- **Promote to Opus when:** never
 
 # Contribute — Generalize Lessons for Boilerplate
 
@@ -28,7 +36,13 @@ You are preparing a generalized contribution that can be pulled into the shared 
    - Replace specific tool/framework names only if the lesson applies broadly; keep them if the lesson is framework-specific
    - Keep the actionable insight intact — the generalized version must be just as useful
 
-4. **Write the contribution**: Create a new file in `.claude/contributions/` with this format:
+4. **Sanitize (MANDATORY)**: Write the draft to a temp path and invoke `sanitizer` on it:
+   ```
+   /sanitizer <temp-draft-path> --mode=boilerplate
+   ```
+   If sanitizer returns any findings (SECRET, PII, PRIVATE_CONTEXT, or TONE), **do not proceed**. Surface the full report to the user and apply recommended fixes before continuing. The sanitizer is the dedicated scrubber — do not duplicate its logic here.
+
+5. **Write the contribution**: Create a new file in `.claude/contributions/` with this format:
 
    **Filename**: `YYYY-MM-DD-<short-slug>.md` (e.g., `2025-06-15-improve-hello-mcp-retry.md`)
 
@@ -53,13 +67,13 @@ You are preparing a generalized contribution that can be pulled into the shared 
    <Why this improves the boilerplate, based on real project experience>
    ```
 
-5. **Review with user**: Show the contribution and ask:
-   - "Does this look project-agnostic? Any details I should strip?"
+6. **Review with user**: Show the contribution along with the sanitizer report and ask:
+   - "Sanitizer pass — findings above. Any other adjustments needed?"
    - "Ready to save, or want to adjust?"
 
-6. **Save**: Write the file to `.claude/contributions/`.
+7. **Save**: Write the file to `.claude/contributions/`.
 
-7. **Report**:
+8. **Report**:
    ```
    Contribution staged
    ===================

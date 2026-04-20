@@ -33,12 +33,15 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 |-------|---------|---------|
 | `/hello` | Manual | Start a new session — load context, check MCP health, recap last session |
 | `/bye` | Manual | End the session — summarize work, capture lessons, persist memory |
-| `/lessons` | Auto (via `/bye`) or manual | Capture and integrate lessons learned |
+| `/lessons` | Auto (via `/bye`) or manual | Capture lessons (default) OR `scan` recent session files / `scan --deep` raw JSONL for skill-change proposals |
 | `/skills-manager` | Auto (via `/lessons`) or manual | Manage skills — add, update, remove, and review |
 | `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers |
 | `/contribute` | Manual | Generalize a lesson and stage it in `.claude/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
 | `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine |
+| `/sanitizer` | Auto (via `/contribute`, `/pull-contributions`) or manual | Scrub files for secrets, PII, private context, tone risks before publish. `--check` mode for CI gates. |
+| `/finance-controller` | Manual (weekly sweep) | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Reports + delegates; never edits directly. |
+| `/claude-expert` | Manual | Reference for Claude Code surfaces (skills vs hooks vs subagents vs MCPs vs memory vs settings). Answers "where should this live" and routes to the doer skill. |
 
 ### Skill Chains
 
@@ -46,8 +49,9 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 /hello ──> /mcp-doctor
 /bye ──> /lessons ──> /skills-manager
 /setup-cognee ──> /mcp-doctor
-/contribute (manual, from any project)
-/pull-contributions (manual, from boilerplate repo)
+/contribute ──> /sanitizer (blocks staging on any finding)
+/pull-contributions ──> /sanitizer --check (blocks pull on any finding)
+/sanitizer (manual, on any file/dir/glob)
 ```
 
 Each skill works independently too. Use `/lessons "always use type hints"` or `/mcp-doctor` anytime.

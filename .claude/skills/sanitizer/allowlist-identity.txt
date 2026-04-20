@@ -1,0 +1,23 @@
+# Your project's public identity — matches here are NEVER flagged, regardless of mode.
+# One entry per line. Case-insensitive. Comments start with #.
+# Populate with names, handles, and domains you deliberately publish.
+#
+# ── Format examples ──
+# # Names
+# Jane Doe
+# J. Doe
+#
+# # GitHub / handles
+# janedoe
+#
+# # Public emails (on resume / public profiles)
+# jane@example.com
+#
+# # Domains
+# example.com
+#
+# ── Populate below ──
+# (empty in boilerplate — customize per project/user)
+#
+# NOTE: Do not add private emails, phone numbers, or home addresses here.
+# This file is only for the public identity you deliberately publish.

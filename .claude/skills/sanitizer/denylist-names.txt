@@ -1,0 +1,12 @@
+# Project codenames, internal agents, client names to strip in --mode=boilerplate and --mode=public.
+# One term per line. Case-insensitive match on word boundaries. Comments start with #.
+# When a match fires in boilerplate mode, suggest replacement from the mapping if given.
+#
+# ── Format examples ──
+# my-project → [project]
+# my_secret_codename → [internal-project]
+# ClientName → [client]
+# AgentAlpha → [orchestrator-agent]
+#
+# ── Populate below ──
+# (empty in boilerplate — add project-specific terms here as you accumulate them)
