@@ -10,25 +10,36 @@ You are starting a new working session. Load context and orient the user.
 
 ## Steps
 
-1. **Load last session**: Read `.claude/memory/sessions/latest-session.md`. Note what was done, key decisions, and open items.
+1. **Check personal workspace**: Check if `~/.claude/me/identity.md` exists.
+   - If missing, note it. Do not interrogate the user — identity will be built up organically by `/bye` as you work together.
+   - If present, read it for user profile, role, and preferences.
 
-2. **Load accumulated knowledge**: Read `.claude/memory/MEMORY.md` for stable patterns and key decisions.
+2. **Load project context** (read all in parallel):
+   - `.claude/memory/MEMORY.md` — distilled knowledge, stable patterns
+   - `.claude/memory/lessons-learned.md` — conventions and lessons
+   - `.claude/memory/project-context.md` — essential domain context
+   - `.claude/memory/sessions/latest-session.md` — last session recap and active workstream
 
-3. **Load lessons**: Read `.claude/memory/lessons-learned.md` for conventions and patterns to keep in mind.
+3. **Check MCP health**: Run the `/mcp-doctor` skill to verify MCP servers are available.
 
-4. **Check MCP health**: Run the `/mcp-doctor` skill to verify MCP servers are available.
+4. **Query cognee** (if healthy): If the cognee MCP is healthy, call `cognee_search` with a query like "project context recent work" to retrieve relevant semantic context from the knowledge graph. Incorporate any useful findings.
 
-5. **Query cognee** (if healthy): If the cognee MCP is healthy, call `cognee_search` with a query like "project context recent work" to retrieve relevant semantic context from the knowledge graph. Incorporate any useful findings.
-
-6. **Present summary** to the user:
+5. **Present summary** to the user:
 
    ```
    Session Start
    =============
    Last session: [brief recap or "No previous sessions"]
    Open items: [list or "None"]
-   MCP status: [cognee: healthy/unhealthy]
+   MCP status: [cognee: healthy/unhealthy, other servers]
    Lessons active: [count] conventions, [count] patterns
+   Identity: [loaded / not set up yet — will build over time]
    ```
 
-7. **Ask the user**: "Continue previous work, or start something new?"
+6. **Wait for the user's first message.** Do NOT ask "which workstream?" or present a menu. The user will tell you what they want to work on.
+
+7. **Lazy-load workstream**: When the user states what they want to work on:
+   - List files in `.claude/memory/workstreams/` and check if any match the topic
+   - If a match exists, read that workstream file silently
+   - If no match, create a new workstream file. If the scope is ambiguous, ask one clarifying question to name it well (this only happens once per new workstream)
+   - If the user explicitly says "continue" with no further context, load the workstream noted in `latest-session.md`

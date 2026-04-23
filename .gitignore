@@ -23,4 +23,11 @@ venv/
 # Node
 node_modules/
 
-# Note: .claude/memory/ files are tracked intentionally for persistence
+# Claude Code — user-generated content (ephemeral or sensitive)
+.claude/memory/sessions/*.md
+.claude/memory/workstreams/*.md
+.claude/memory/agent-log.md
+.claude/settings.local.json
+
+# Note: .claude/memory/MEMORY.md, lessons-learned.md, and project-context.md
+# are tracked intentionally — they are templates (boilerplate) or team knowledge (projects)

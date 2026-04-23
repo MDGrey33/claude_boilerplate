@@ -36,6 +36,7 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 | `/lessons` | Auto (via `/bye`) or manual | Capture lessons (default) OR `scan` recent session files / `scan --deep` raw JSONL for skill-change proposals |
 | `/skills-manager` | Auto (via `/lessons`) or manual | Manage skills — add, update, remove, and review |
 | `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers |
+| `/log` | Auto (via skills) | Append structured entry to agent log |
 | `/contribute` | Manual | Generalize a lesson and stage it in `.claude/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
 | `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine |
@@ -88,13 +89,38 @@ Project A                          Boilerplate Repo
 
 ## Memory Architecture
 
+Three scopes keep knowledge organized by ownership:
+
+| Scope | Location | Purpose |
+|-------|----------|---------|
+| Personal | `~/.claude/me/` | Identity, team roster, brag log, growth notes |
+| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams, activity, reports |
+| Contributions | `repo/.claude/contributions/` | Generalized lessons staged for boilerplate |
+
+### Personal workspace (`~/.claude/me/`)
+
+Created on first `/hello`, built up organically by `/bye` across all repos. Not in any git repo — personal to the engineer.
+
+```
+~/.claude/me/
+├── identity.md          # Role, domains, skills, timezone, platform IDs
+├── team.md              # Direct reports and their platform IDs (leadership roles)
+├── brag-log.md          # Accomplishments across all repos (append-only)
+└── growth.md            # Improvement areas, self-assessment notes
+```
+
+### Project memory (`repo/.claude/memory/`)
+
 ```
 .claude/memory/
 ├── MEMORY.md              # Stable patterns, key decisions (loaded into system prompt)
+├── lessons-learned.md     # Categorized lessons (appended over time)
+├── project-context.md     # Domain knowledge (manually maintained)
 ├── sessions/
 │   └── latest-session.md  # Last session summary (overwritten each /bye)
-├── lessons-learned.md     # Categorized lessons (appended over time)
-└── project-context.md     # Domain knowledge (manually maintained)
+├── workstreams/           # Per-topic working context (lazy-loaded from user intent)
+├── activity/              # Daily collection outputs (never auto-loaded)
+└── reports/               # Synthesis outputs — weekly rollups, 1:1 preps (never auto-loaded)
 
 .claude/contributions/         # Generalized lessons staged for boilerplate (via /contribute)
 ```
@@ -114,6 +140,7 @@ Skills gracefully degrade if cognee MCP is unavailable.
 | `.claude/docs/architecture.md` | Your project's architecture and structure |
 | `.claude/docs/conventions.md` | Code style, patterns, and standards |
 | `.claude/memory/project-context.md` | Domain-specific knowledge |
+| `~/.claude/me/identity.md` | Your role, preferences, writing style (personal, not per-project) |
 
 ### Adding a new skill
 
