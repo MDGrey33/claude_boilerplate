@@ -94,7 +94,7 @@ Three scopes keep knowledge organized by ownership:
 | Scope | Location | Purpose |
 |-------|----------|---------|
 | Personal | `~/.claude/me/` | Identity, team roster, brag log, growth notes |
-| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams, activity, reports |
+| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams |
 | Contributions | `repo/.claude/contributions/` | Generalized lessons staged for boilerplate |
 
 ### Personal workspace (`~/.claude/me/`)
@@ -118,9 +118,7 @@ Created on first `/hello`, built up organically by `/bye` across all repos. Not 
 ├── project-context.md     # Domain knowledge (manually maintained)
 ├── sessions/
 │   └── latest-session.md  # Last session summary (overwritten each /bye)
-├── workstreams/           # Per-topic working context (lazy-loaded from user intent)
-├── activity/              # Daily collection outputs (never auto-loaded)
-└── reports/               # Synthesis outputs — weekly rollups, 1:1 preps (never auto-loaded)
+└── workstreams/           # Per-topic working context (lazy-loaded from user intent)
 
 .claude/contributions/         # Generalized lessons staged for boilerplate (via /contribute)
 ```
