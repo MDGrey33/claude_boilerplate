@@ -47,4 +47,13 @@ You are starting a new working session. Load context and orient the user.
    - If they describe something new, list files in `.claude/memory/workstreams/` and check if any match the topic
      - If a match exists, confirm: "Looks like this relates to [workstream name] — shall I load that, or create a new one?"
      - If no match, create a new workstream file. If the scope is ambiguous, ask one clarifying question to name it well.
+   - When creating a new workstream file, sanitize the filename:
+     - Lowercase the workstream name
+     - Replace any non-alphanumeric characters (except hyphens) with hyphens (allow only a-z, 0-9, and -)
+     - Collapse repeated hyphens into single hyphens
+     - Trim to a reasonable length (e.g., 50 characters)
+     - Force the `.md` extension
+     - Reject any input containing `..`, `/`, or other path separators — prompt for clarification if detected
+     - Always join the sanitized slug to `.claude/memory/workstreams/` (never concatenate raw user input)
+     - Fail with a validation prompt if the name cannot be safely normalized
    - The active workstream is now set for this session. `/bye` will use it without guessing.

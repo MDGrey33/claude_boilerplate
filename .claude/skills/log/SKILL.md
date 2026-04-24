@@ -2,7 +2,7 @@
 name: log
 description: Append a structured entry to the agent log with automatic rotation
 user_invocable: false
-args: "run_id=<id> skill=<name> status=<SUCCESS|FAILED> detail=<message>"
+args: "run_id=<id> skill=<name> status=<SUCCESS|FAILED|WARNING> detail=<message>"
 ---
 
 # Agent Log
@@ -12,7 +12,7 @@ Append a structured log entry to `.claude/memory/agent-log.md`. This skill owns 
 ## Steps
 
 1. **Parse input**: Extract the fields from the arguments:
-   - `run_id` — Identifier linking related entries (e.g., `cos-2026-04-11-1`). Use `manual` if invoked by a user or no run ID was provided.
+   - `run_id` — Identifier linking related entries (e.g., `cos-2026-04-11-1`). Use `manual` if no run ID was provided.
    - `skill` — Name of the skill or agent that produced this entry
    - `status` — `SUCCESS`, `WARNING`, or `FAILED`
    - `detail` — Brief description (item counts on success, error reason on failure)

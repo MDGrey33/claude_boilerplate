@@ -43,7 +43,7 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 | `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
 | `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
 | `/mcp-doctor` | Check health of configured MCP servers |
-| `/log` | Append structured entry to agent log |
+| `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine |
