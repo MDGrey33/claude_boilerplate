@@ -26,8 +26,9 @@ node_modules/
 # Claude Code — user-generated content (ephemeral or sensitive)
 .claude/memory/sessions/*.md
 .claude/memory/workstreams/*.md
-.claude/memory/activity/*.md
-.claude/memory/reports/**
+.claude/memory/activity/**/*.md
+.claude/memory/reports/**/*.md
+!.claude/memory/activity/.gitkeep
 !.claude/memory/reports/.gitkeep
 .claude/settings.local.json
 
