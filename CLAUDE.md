@@ -6,11 +6,29 @@
 
 This project uses **cognee** for persistent semantic memory alongside markdown-based context files.
 
-- **Active memory**: `.claude/memory/MEMORY.md` — accumulated knowledge, stable patterns
-- **Session history**: `.claude/memory/sessions/latest-session.md` — last session recap
-- **Lessons learned**: `.claude/memory/lessons-learned.md` — mistakes, conventions, discoveries
-- **Project context**: `.claude/memory/project-context.md` — domain-specific knowledge
-- **Contributions**: `.claude/contributions/` — generalized lessons staged for boilerplate
+Three scopes, each with its own owner and location:
+
+| Scope | Location | Purpose |
+|-------|----------|---------|
+| Personal | `~/.claude/me/` | Identity, team roster, brag log, growth notes |
+| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams |
+| Contributions | `repo/.claude/contributions/` | Generalized lessons staged for boilerplate |
+
+Project memory layout:
+
+```
+.claude/memory/
+├── MEMORY.md              # Distilled knowledge (curated, always loaded)
+├── lessons-learned.md     # Raw lessons (append-only, always loaded)
+├── project-context.md     # Domain context for this project (always loaded)
+├── sessions/
+│   └── latest-session.md  # Last session recap
+├── workstreams/           # Per-topic working context (lazy-loaded)
+```
+
+## Agent Behavior
+
+See `.claude/docs/agent-guardrails.md` for operational principles.
 
 ## Prerequisites
 
@@ -25,6 +43,7 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 | `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
 | `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
 | `/mcp-doctor` | Check health of configured MCP servers |
+| `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine |
