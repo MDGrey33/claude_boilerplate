@@ -36,6 +36,9 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 | `/lessons` | Auto (via `/bye`) or manual | Capture lessons (default) OR `scan` recent session files / `scan --deep` raw JSONL for skill-change proposals |
 | `/skills-manager` | Auto (via `/lessons`) or manual | Manage skills — add, update, remove, and review |
 | `/mcp-doctor` | Auto (via `/hello`, `/setup-cognee`) or manual | Health check configured MCP servers |
+| `/collect-my-activity` | Manual | Collect user's daily activity from Slack, Jira, Confluence, GitHub, Drive |
+| `/collect-team-activity` | Manual | Collect a team member's daily activity (leadership roles) |
+| `/one-on-one-prep` | Manual | Synthesize a member's activity into 1:1 meeting prep |
 | `/log` | Auto (via skills) | Append structured entry to agent log |
 | `/contribute` | Manual | Generalize a lesson and stage it in `.claude/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
@@ -94,7 +97,7 @@ Three scopes keep knowledge organized by ownership:
 | Scope | Location | Purpose |
 |-------|----------|---------|
 | Personal | `~/.claude/me/` | Identity, team roster, brag log, growth notes |
-| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams |
+| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams, activity, reports |
 | Contributions | `repo/.claude/contributions/` | Generalized lessons staged for boilerplate |
 
 ### Personal workspace (`~/.claude/me/`)
@@ -118,7 +121,9 @@ Created on first `/hello`, built up organically by `/bye` across all repos. Not 
 ├── project-context.md     # Domain knowledge (manually maintained)
 ├── sessions/
 │   └── latest-session.md  # Last session summary (overwritten each /bye)
-└── workstreams/           # Per-topic working context (lazy-loaded from user intent)
+├── workstreams/           # Per-topic working context (lazy-loaded from user intent)
+├── activity/              # Daily collection outputs (never auto-loaded)
+└── reports/               # Synthesis outputs — weekly rollups, 1:1 preps (never auto-loaded)
 
 .claude/contributions/         # Generalized lessons staged for boilerplate (via /contribute)
 ```
@@ -127,6 +132,14 @@ Created on first `/hello`, built up organically by `/bye` across all repos. Not 
 **Cognee** is the enrichment layer — semantic search across all accumulated knowledge.
 
 Skills gracefully degrade if cognee MCP is unavailable.
+
+### Team & leadership features
+
+For engineering managers, directors, and VPs — driven by `~/.claude/me/identity.md` (role) and `~/.claude/me/team.md` (direct reports):
+
+- **`/collect-team-activity`** — collects a team member's daily activity from public Slack, Jira, Confluence, GitHub
+- **`/one-on-one-prep`** — synthesizes collected activity into a structured 1:1 meeting agenda
+- **`/collect-my-activity`** — works for any role, collects your own activity across all sources
 
 ## Customization
 
