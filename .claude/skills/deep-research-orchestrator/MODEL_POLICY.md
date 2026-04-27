@@ -46,13 +46,24 @@ Edit this table to change model selection per stage. The orchestrator reads this
 
 ## Override mechanism
 
-Any user invocation of the skill can override per-stage model with:
+Any user invocation of the skill can override per-stage models. Two formats:
+
+**Inline arg style** (model IDs use the full `claude-...` form, matching the table above):
 
 ```
-/deep-research <topic> --model-stage5=opus-4-7 --model-stage6=opus-4-7
+/deep-research <topic> --model-stage5=claude-opus-4-7 --model-stage6=claude-opus-4-7
 ```
 
-Or by adding a `MODEL_OVERRIDE.md` file at `~/workspace/research/<session>/MODEL_OVERRIDE.md` before dispatch.
+**File style.** Drop a `MODEL_OVERRIDE.md` at `~/workspace/research/<session>/MODEL_OVERRIDE.md` before the orchestrator dispatches. The file is a markdown table mirroring the per-stage assignments above; only the rows you list are overridden. Format:
+
+```markdown
+| Stage | Model |
+|---|---|
+| 5 | claude-opus-4-7 |
+| 6b | claude-opus-4-7 |
+```
+
+Use the same model-ID format as the table. Stage IDs match the per-stage assignments table (e.g., `1`, `2.5`, `6a`, `6b`). Unlisted stages keep the default level→model mapping.
 
 ---
 

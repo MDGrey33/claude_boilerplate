@@ -90,10 +90,7 @@ Document your selection reasoning in a "## Selection rationale" section at the t
 
 1. **Every claim cites the corpus by `claim_id`.** No new claims introduced at this stage. If you need a claim that isn't in the corpus, dispatch a gap-fill subagent first.
 2. **Counter-evidence quota:** every main argument must include the STRONGEST opposing evidence found in the corpus, not the weakest. The fact-check stage verifies this.
-3. **Confidence ceiling (matches Stage 5):**
-   - If ANY thesis-core contradiction unresolved → max confidence is "low"
-   - If ≥30% of material contradictions unresolved → max confidence is "medium"
-   - If theory rests primarily on D-F sources → max confidence is "low"
+3. **Confidence ceiling.** Apply the materiality-aware thresholds defined in `SKILL.md` "Unified governance — failure thresholds and confidence ceilings" section. Do not redefine them here — that section is the canonical source. If a threshold needs to change, edit it in SKILL.md only.
 4. **Don't bury counterarguments.** Their own section, addressed head-on.
 5. **Be willing to conclude "the question is unanswerable from current evidence."** Valid theory.
 6. **The thesis must be falsifiable.** "It's complex" is not a thesis. State what you actually believe and what would prove you wrong.

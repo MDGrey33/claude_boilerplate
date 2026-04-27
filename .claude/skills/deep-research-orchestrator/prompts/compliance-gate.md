@@ -20,7 +20,7 @@ The gate REJECTS subagent output that doesn't meet the contract. Rejected agents
 
 ### Per-ledger-line (JSONL)
 4. **Valid JSON** (parses cleanly)
-5. **Required fields present:** `claim_id`, `parent_claim_id` (nullable), `claim`, `source_url`, `source_title`, `source_type`, `primary_secondary`, `publication_date` (nullable but warn), `retrieved_at`, `excerpt`, `quote_location` (nullable), `language`, `admiralty`, `verdict`, `legal_status`, `bias`, `independence_cluster` (nullable), `agent_id`, `stage`, `subquestion_id` (nullable), `timestamp`
+5. **Required fields present:** `claim_id`, `parent_claim_id` (nullable), `refutes_claim_id` (nullable), `claim`, `source_url`, `source_title`, `source_type`, `primary_secondary`, `publication_date` (nullable but warn), `retrieved_at`, `excerpt`, `quote_location` (nullable), `language`, `admiralty`, `verdict`, `legal_status`, `bias`, `independence_cluster` (nullable), `agent_id`, `stage`, `subquestion_id` (nullable), `timestamp`
 6. **Enum compliance:**
    - `admiralty` matches `^[A-F]/[1-6]$`
    - `verdict` ∈ `{true, likely, contested, false, unknown}`

@@ -13,7 +13,6 @@ You orchestrate a research pipeline that produces a verified, contradiction-chec
 
 - User explicitly asks for "deep research" / "/deep-research" / "thorough investigation" / "full literature review"
 - Question is non-trivial: contradictory evidence likely, high-stakes decision, novel topic, or topic where shallow research has failed
-- COS routing classifies the request as L2 or L3 (high risk × either reversibility) per CLAUDE.md
 
 When NOT to invoke:
 - Simple factual lookup → use WebSearch directly or a single research subagent
@@ -76,7 +75,7 @@ Generate the short-uuid as 8 chars (ULID-style or random hex). The manifest is t
 }
 ```
 
-Final deliverable lands in `~/workspace/inbox/deep-research-<topic>-<date>.md` (the session UUID is appended to disambiguate if two same-day runs exist).
+Final deliverable lands in `~/workspace/inbox/deep-research-<topic>-<date>-<short-uuid>.md`. The UUID disambiguates same-day runs on the same topic.
 
 ## Pipeline stages
 
@@ -212,7 +211,7 @@ Ledger schema includes `claim_id`, `parent_claim_id`, `refutes_claim_id`, `excer
 
 ## Unified governance — failure thresholds and confidence ceilings
 
-This section is authoritative. Stages 5, 6, and 7 reference these same numbers. Schema/governance drift between files is a bug — fix here first.
+**This section is the SINGLE SOURCE OF TRUTH for governance thresholds.** `prompts/contradiction.md`, `prompts/theory-draft.md`, and `prompts/fact-check.md` reference this section by name and MUST NOT restate the numbers. Schema/governance drift between files is a bug — fix here first, then verify the prompt files still defer correctly.
 
 **Materiality classification** (Stage 7 assigns; Stages 5, 6 use):
 - `thesis-core` — claim whose failure would invalidate the thesis
@@ -297,7 +296,7 @@ After completion, your reply to the user is:
 2. **Confidence level** (high/medium/low + 1 reason, citing unified governance rule)
 3. **Inbox path** to the full deliverable + session-directory path for ledger/corpus-quality
 4. **Any unresolved contradictions** flagged briefly with materiality
-5. **Any corpus-quality caveats** (e.g., "primary-source share was 22% — below 30% threshold; treat the techincal-claim arguments as preliminary")
+5. **Any corpus-quality caveats** (e.g., "primary-source share was 22% — below 30% threshold; treat the technical-claim arguments as preliminary")
 6. **What would change the answer** (falsifiability hook)
 
 Do NOT paste the full thesis inline unless explicitly asked.

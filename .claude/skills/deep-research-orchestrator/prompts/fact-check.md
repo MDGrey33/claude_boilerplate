@@ -82,16 +82,15 @@ If audit produced revisions:
 - Re-run a mini fact-check on ONLY the revised sections
 - Document the second pass under "Pass 2"
 
-## Failure thresholds — UNIFIED GOVERNANCE
+## Failure thresholds
 
-This section is authoritative. Stage 5 contradiction rules and Stage 6 confidence rules reference these same thresholds.
+**The canonical thresholds live in `SKILL.md` "Unified governance — failure thresholds and confidence ceilings".** Apply them here; do not restate them. If a threshold needs to change, edit SKILL.md only.
 
-**Materiality-aware policy:**
+What this stage adds on top of those canonical thresholds:
 
-1. **ANY thesis-core claim fails after one revision pass** → ABORT pipeline.
-2. **≥30% of material claims fail after one revision pass** → ABORT pipeline.
-3. **Confidence cap from Stage 5** still applies after revisions: if ≥30% of material contradictions unresolved, max "medium"; if any thesis-core contradiction unresolved, max "low".
-4. **Peripheral failures alone never trigger abort** — they get logged and either fixed or dropped silently.
+- **Materiality classification is performed HERE** (Stage 7). Stages 5 and 6 reference the labels you assign.
+- **Audit applies after one revision pass.** Run the full audit, apply revisions, run a mini-audit on revised sections only. The abort decision uses post-revision pass-rates against the SKILL.md thresholds.
+- **Peripheral failures never abort** — they get logged in the audit table and either fixed or dropped silently.
 
 When pipeline aborts:
 - Write failure report to `~/workspace/inbox/deep-research-FAILURE-<topic>-<date>.md`

@@ -26,7 +26,17 @@ Format: `[B/2]` means usually-reliable source with probably-true information.
 
 ### Independence rule for grade `1`
 
-A claim earns `1` only if it is confirmed by ≥ 2 sources from **different `independence_cluster` values**. Five rewrites of the same press release belong to one cluster and count as ONE source. Define independence_cluster as: domain root + parent organization + syndication source. Default unknown if cannot determine.
+A claim earns `1` only if it is confirmed by ≥ 2 sources from **different `independence_cluster` values**. Five rewrites of the same press release belong to one cluster and count as ONE source.
+
+**`independence_cluster` is a single string** identifying the most specific source family. Use this precedence (most specific first):
+
+1. **Parent organization or media-group identifier** when sources share a corporate parent (e.g., `cnn-warner-bros-discovery`, `nyt-company`)
+2. **Syndication wire service** when content is republished from a wire (e.g., `reuters`, `ap`, `afp`) — overrides the carrier domain
+3. **Domain root** as the default (e.g., `anthropic.com`, `arxiv.org`, `nature.com`)
+
+Default to `unknown` if you cannot determine any of the three.
+
+Example: a Reuters story republished on five different newspaper sites all share `independence_cluster: "reuters"` and count as ONE source for the `1` grade. A primary Anthropic announcement on anthropic.com uses `independence_cluster: "anthropic.com"`.
 
 ## Verdict scale (PolitiFact-style)
 - **true** — claim is accurate as stated
