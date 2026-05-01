@@ -33,6 +33,8 @@ Accepts:
 - Directory (recursive): `/sanitizer <path>/`
 - Glob: `/sanitizer ~/.claude/skills/*/SKILL.md`
 
+When scanning a directory, always include `settings.json` — this is a prime location for org/repo-specific permission entries that get committed to the repo.
+
 ## Modes
 
 | Mode | What it strips |
@@ -56,6 +58,7 @@ Anything that looks like a credential, key, or token. Patterns maintained in `se
 - Service-account JSON refs (`"private_key": "..."`, `"client_email": "...iam.gserviceaccount.com"`)
 - Bearer tokens in example curl commands
 - Database URLs with embedded passwords (`postgres://user:pass@...`)
+- Org/repo-specific `gh api` permission strings in `settings.json`: `Bash(gh api orgs/<real-org>/...)` or `Bash(gh api repos/<real-org>/...)` — flags real identifiers, ignores placeholder syntax like `<org>`
 
 ### 2. PII
 Personally identifying info:
@@ -144,6 +147,7 @@ Only runs when the user explicitly says apply or when invoked with `--apply`.
 2. For each finding with a suggested replacement:
    - Apply deterministic replacements (path normalization, codename strip, email redaction) automatically.
    - For TONE findings, present each one to the user individually with the suggested rewrite and ask for yes/no/edit.
+   - **Permission-entry rule:** if a SECRET or PRIVATE_CONTEXT finding occurs inside a permission entry (i.e. the matched line sits within an `allowedTools` or `permissions` block in `settings.json`), do not redact — instead suggest moving the entire entry to `.claude/settings.local.json`. The value is likely still needed; the problem is that it is committed. Present this as the default suggested fix and ask for confirmation before applying.
 3. Write patched files.
 4. Append applied changes to the same report under `## Applied Changes`.
 5. Report diff summary.
