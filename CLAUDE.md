@@ -11,7 +11,7 @@ Three scopes, each with its own owner and location:
 | Scope | Location | Purpose |
 |-------|----------|---------|
 | Personal | `~/.claude/me/` | Identity, team roster, brag log, growth notes |
-| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams |
+| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams, activity, reports |
 | Contributions | `repo/.claude/contributions/` | Generalized lessons staged for boilerplate |
 
 Project memory layout:
@@ -24,6 +24,8 @@ Project memory layout:
 ├── sessions/
 │   └── latest-session.md  # Last session recap
 ├── workstreams/           # Per-topic working context (lazy-loaded)
+├── activity/              # Daily collection outputs (never auto-loaded)
+└── reports/               # Synthesis outputs (never auto-loaded)
 ```
 
 ## Agent Behavior
@@ -43,6 +45,9 @@ Run `/setup-cognee` for first-time installation and configuration. It detects yo
 | `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
 | `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
 | `/mcp-doctor` | Check health of configured MCP servers |
+| `/collect-my-activity` | Collect user's daily activity from Slack, Jira, Confluence, GitHub, Drive |
+| `/collect-team-activity` | Collect a team member's daily activity (leadership roles) |
+| `/one-on-one-prep` | Synthesize a member's activity into 1:1 meeting prep |
 | `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
