@@ -2,7 +2,7 @@
 name: memory-hygiene
 description: Audit and prune the auto-memory system. Classifies each MEMORY.md entry and topic file as ENFORCE / HOT / WARM / STALE, archives old ones, and optionally promotes stable HOT patterns into CLAUDE.md Hard Overrides. Use when MEMORY.md gets dense (>30 entries), sessions feel slow from context bloat, or on a monthly cadence. Trigger "memory hygiene", "clean memory", "memory audit", "memory promote", "prune memory".
 user_invocable: true
-args: `audit` (default) | `promote` | `archive` | `compact`
+args: `audit` (default) | `promote` | `archive` | `compact` | `graduate`
 ---
 
 ## When to Use
@@ -153,6 +153,76 @@ Emergency reduction when MEMORY.md is bloated past target (>200 lines or >50 ent
 4. Report line count delta and list of archived items.
 
 `compact` is the only action that may run without explicit per-entry approval — but only the user authorises `compact` in the first place.
+
+---
+
+## Action: `graduate`
+
+Converts stable auto-memory entries into long-term source documents, staging them for epistemically-managed storage (a wiki/claims layer if you have one, or a plain permanent record if you don't).
+
+**Model:** Haiku 4.5 — claim rewriting is mechanical extraction, not judgment.
+
+### When to use
+
+- After `audit` identifies ENFORCE-class entries stable for 30+ days
+- HOT `feedback` entries representing durable insights (not project-specific preferences)
+- `reference` entries pointing to architecturally important external systems
+- Explicit: "graduate <file or all>"
+
+### Steps
+
+**1. Select candidates**
+
+Default: ENFORCE-class entries from the last audit + HOT `feedback` entries older than 30 days.
+Present candidates and get confirmation before proceeding.
+
+**2. Determine output directory**
+
+If you have a wiki/sources layer, write to its sources directory (e.g. `~/workspace/sources/`).
+Otherwise write to `<your-workspace>/memory-graduated/` (create if missing).
+
+**3. For each candidate, write a source doc**
+
+Path: `<sources-dir>/memory-graduate-YYYY-MM-DD-<slug>.md`
+
+Frontmatter:
+```yaml
+---
+title: <memory name>
+source_type: auto-memory
+memory_type: <feedback|user|project|reference>
+graduated_at: YYYY-MM-DD
+origin_file: ~/.claude/projects/<slug>/memory/<filename>
+authority_prior: high
+immutable: false
+---
+```
+
+Body: rewrite the memory in third-person episodic form. Strip first-person language. For `feedback` entries, extract 2–5 atomic claims in the form:
+> "Users with this workflow profile require X when Y, because Z."
+
+**4. Tag the original memory file**
+
+Add `graduated: <YYYY-MM-DD>` to the YAML frontmatter of the original file.
+
+**5. Update MEMORY.md**
+
+Append ` (graduated YYYY-MM-DD)` to the relevant line.
+
+**6. Report**
+
+List source docs written, paths. Note that if wiki-ingest is available, it will pick these up automatically; otherwise they are permanent human-readable records.
+
+### Wiki-ingest integration (optional)
+
+If you have a `wiki-ingest` skill installed: call it on each source doc after writing. If not, source docs accumulate as correctly-formatted records the user can query or ingest later.
+
+### Don't
+
+- Don't graduate `project` entries with absolute deadlines or ephemeral state
+- Don't graduate entries already tagged `graduated:` (idempotent check)
+- Don't lose the specific incident or rationale — the "why" is the epistemic value
+- Don't delete or archive the original auto-memory entry after graduation — it still serves as a fast reflex
 
 ---
 
