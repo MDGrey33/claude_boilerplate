@@ -54,11 +54,32 @@ Collect the user's work activity for a given day (or date range) from all availa
 
    **Timezone model:**
    - Interpret the requested date(s) in the user's **local timezone**, read from `identity.md`'s `## Profile` section, field `Timezone` (IANA name, e.g., `Asia/Dubai`). Fall back to the system timezone if missing.
-   - Convert to **UTC** when querying Slack and `gh` (both accept UTC ISO timestamps).
-   - Pass `YYYY-MM-DD` to Jira and Confluence. **Caveat**: Jira evaluates JQL date literals in the *Jira user's profile timezone*, not UTC — if the Jira profile is on UTC while the user is on another TZ (e.g., Asia/Dubai), results drift by hours. Recommend aligning the Jira profile TZ to the user's local TZ.
    - Output filenames use the user's **local date** — matches how the user thinks about the day.
 
+   **Date conversion** — the local-day window is `[date 00:00:00, next_day 00:00:00)` in the user's IANA TZ. Compute:
+   - `tz_offset` from the IANA name (e.g., `Asia/Dubai` → `+04:00`, `Europe/London` → `+01:00` BST or `+00:00` GMT depending on date).
+   - `local_start = {date}T00:00:00{tz_offset}` and `local_end = {next_day}T00:00:00{tz_offset}`.
+   - `utc_start = local_start.astimezone(UTC)` and `utc_end = local_end.astimezone(UTC)`.
+
+   Worked example for `date=2026-04-30`, `tz=Asia/Dubai`:
+   - `local_start = 2026-04-30T00:00:00+04:00` → `utc_start = 2026-04-29T20:00:00Z`
+   - `local_end   = 2026-05-01T00:00:00+04:00` → `utc_end   = 2026-04-30T20:00:00Z`
+
+   Per-source query parameters:
+   - **Slack** — `after = utc_start`, `before = utc_end` (Unix timestamps). Or use `from:<@id> on:{date}` query modifier; Slack interprets `on:` in the workspace TZ.
+   - **`gh search`** — pass full ISO timestamps with the offset, not bare dates: `--created "{local_start}..{local_end}"`. Bare `YYYY-MM-DD..YYYY-MM-DD` interprets dates in UTC and shifts the window by the TZ offset, missing/misattributing PRs at day boundaries.
+   - **Jira / Confluence** — pass `{date}` and `{next_day}` as `YYYY-MM-DD` strings with the half-open `>=` / `<` boundary (see Jira section). **Caveat**: Jira and Confluence evaluate JQL/CQL date literals in the *user's profile timezone*, not UTC — if the Jira profile TZ differs from the user's local TZ, results drift by hours. Recommend aligning the Jira profile TZ to the user's local TZ.
+   - **Drive** — `viewedByMeTime` and `modifiedTime` are RFC 3339 UTC; use `utc_start` / `utc_end`.
+
    **Multi-day ranges**: Loop internally over dates, executing steps 4–7 once per date. Produce one output file per date. One day's MCP responses fit in a single context window; multiple days may not.
+
+   **Status semantics** — apply consistently across the file's `Status:` header, the `/log` call, and any returned summary string:
+
+   - **SUCCESS** — every required source responded successfully, regardless of result count. Zero items is still SUCCESS. "Quiet day", "day in progress", "low coverage", "PTO", "weekend" are all SUCCESS with zero items.
+   - **PARTIAL** — at least one required source failed mid-collection (timeout, error, permission denied during pagination) after others had already returned data. Capture what's available, list the failed source under `## Gaps` with the error reason, log `status=WARNING`. Do not abort.
+   - **FAILED** — a required source (Slack MCP, Atlassian MCP) was unavailable from the start, or the run couldn't be processed at all. Output file is written with empty `## Activity` and the failure reason under `## Gaps`. `/log` status is `FAILED`.
+
+   Do **not** use PARTIAL to signal "the day isn't over yet" or "I expected more data". Coverage-time concerns belong in the `## Summary` prose, not in the Status field.
 
 4. **Collect from sources in parallel**:
 
@@ -74,7 +95,7 @@ Collect the user's work activity for a given day (or date range) from all availa
 
    **Stop-and-flag rule**: this skill always operates at single-day, single-user granularity (multi-day args loop one day at a time). At that scope, if pagination hits 5+ pages on any single source — stop and flag. 500 events from one source on one day for one person is anomalous — almost always a wrong date boundary or a missing identity filter. Don't carry the assumption beyond this scope.
 
-   **On partial failure**: if a source fails after others have already returned data (e.g., Jira works, Confluence times out on page 2), capture what's available, mark the failed source under `## Gaps` with the error reason, set the file's `Status` to `PARTIAL`, and log `status=WARNING` via `/log`. Do not abort the whole run.
+   **On partial failure**: see Status semantics in step 3 — set Status=PARTIAL, /log status=WARNING, list the failed source under `## Gaps` with its error reason, capture what's available, do not abort.
 
    **Slack:**
    - Search for messages from the user in the date range using their Slack user ID
@@ -91,11 +112,13 @@ Collect the user's work activity for a given day (or date range) from all availa
      2. **Created**: `creator = "<accountId>" AND created >= "YYYY-MM-DD" AND created < "next_day"` — captures new issues the user filed.
    - **Date boundary**: use `>= "YYYY-MM-DD" AND < "next_day"` (not `<=` — Jira treats `<= "04-10"` as "before start of 04-10").
    - **Timezone caveat**: JQL date literals evaluate in the Jira user's profile timezone, not UTC. Confirm the Jira profile TZ matches the user's local TZ or expect drift.
-   - Request minimal fields: `summary, status, issuetype, priority, updated`.
-   - Capture: key, summary, status, what changed, issue URL.
+   - Request minimal fields: `summary, status, issuetype, priority, updated, assignee, reporter`.
+   - Capture: key, summary, status, **assignee**, **reporter**, what changed, issue URL.
+   - **Authorship vs ownership**: when the user is the *reporter* but not the *assignee* on a ticket, surface this in the activity item (e.g., "Filed; assigned to {assignee-name}"). Downstream synthesis skills need this distinction.
 
    **GitHub:**
-   - **Active-session flip-flop pattern**: env-var token-passing (`GH_TOKEN=$(...) gh ...`) is blocked by the sandbox's `$(...)` substitution guard. Instead, switch the active gh session to the cached business handle, run plain `gh` commands, then restore. Each step is a separate Bash call (allowlist-friendly):
+   - **Active-session flip-flop pattern**: env-var token-passing (`GH_TOKEN=$(...) gh ...`) is blocked by the sandbox's `$(...)` substitution guard. Instead, switch the active gh session to the cached business handle, run plain `gh` commands, then restore. Each step is a separate Bash call (allowlist-friendly).
+   - **Date range syntax** — pass full ISO timestamps with the user's TZ offset, not bare `YYYY-MM-DD`. Bare dates are interpreted as UTC, so for non-UTC user TZs the window slips by the offset (e.g., for Asia/Dubai, `--created "2026-04-30..2026-04-30"` covers UTC 04-30 = local 04-30 04:00 → 05-01 04:00, missing/misattributing PRs at day boundaries).
 
      ```bash
      # Step 1: capture the previously-active user, in case it differs from the cached handle
@@ -105,20 +128,24 @@ Collect the user's work activity for a given day (or date range) from all availa
      gh auth switch --user <cached-handle>
 
      # Step 3: run the four searches as plain commands
-     gh search prs --author "@me" --created "YYYY-MM-DD..YYYY-MM-DD" \
+     # Example: date=2026-04-30, tz_offset=+04:00 — see step 3 "Date conversion"
+     LOCAL_START="2026-04-30T00:00:00+04:00"
+     LOCAL_END="2026-05-01T00:00:00+04:00"
+
+     gh search prs --author "@me" --created "${LOCAL_START}..${LOCAL_END}" \
        --limit 100 --json number,title,url,repository,state,createdAt,updatedAt
-     gh search prs --reviewed-by "@me" --updated "YYYY-MM-DD..YYYY-MM-DD" \
+     gh search prs --reviewed-by "@me" --updated "${LOCAL_START}..${LOCAL_END}" \
        --limit 100 --json number,title,url,repository,state
-     gh search issues --author "@me" --created "YYYY-MM-DD..YYYY-MM-DD" \
+     gh search issues --author "@me" --created "${LOCAL_START}..${LOCAL_END}" \
        --limit 100 --json number,title,url,repository,state
-     gh search issues --commenter "@me" --updated "YYYY-MM-DD..YYYY-MM-DD" \
+     gh search issues --commenter "@me" --updated "${LOCAL_START}..${LOCAL_END}" \
        --limit 100 --json number,title,url,repository
 
      # Step 4: restore the previously-active user (try-finally semantics — always run, even on partial failure)
      gh auth switch --user <previously-active>
      ```
 
-   - **Range syntax `A..B` is inclusive on both ends** — different from Jira's half-open convention above.
+   - **Range syntax `A..B` is inclusive on both ends** — different from Jira's half-open convention above. Using `next_day T00:00:00` as the upper bound therefore includes events at exactly midnight local; this is a 1-second overlap with the next day's window, acceptable for daily granularity.
    - With the cached handle active, `@me` resolves to the business user. Authentication and visibility (private repos) are correct for the work account.
    - **Crash-safety**: if the skill exits between steps 2 and 4, the user is left on the cached handle. Add a one-line note to `## Gaps`: *"gh active session left as `<cached-handle>`; original session was `<previously-active>` — restore manually with `gh auth switch --user <previously-active>` if needed."*
    - For each result: capture the repo, number, title, and URL.
@@ -126,9 +153,9 @@ Collect the user's work activity for a given day (or date range) from all availa
 
    **Confluence:**
    - Uses the same Atlassian MCP as Jira — no separate pre-flight check needed
-   - Search for pages created or updated by the user in the date range using `searchConfluenceUsingCql` with CQL: `contributor = "{accountId}" AND lastmodified >= "YYYY-MM-DD" AND lastmodified < "next_day"` (same date boundary logic as Jira)
-   - For each page: capture the space, title, type of contribution (created vs. updated), and the page URL
-   - Also search for comments the user added on Confluence pages in the date range
+   - `searchConfluenceUsingCql`: `contributor = "{accountId}" AND lastmodified >= "YYYY-MM-DD" AND lastmodified < "next_day"` (same date boundary logic as Jira)
+   - The `contributor` field already covers comments — a comment is a Confluence contribution. No separate comment query needed.
+   - For each result: capture the space, title, type of contribution (created vs. updated, page vs. comment), and the URL
 
    **Google Drive:**
    - **The MCP's query language only supports `title`, `fullText`, `mimeType`, `modifiedTime`, `viewedByMeTime` as query terms.** `owners` is **not** a supported field — neither `'email' in owners` nor `'me' in owners` works (both return *"Unsupported query field"*). Use a two-pronged approach instead:
@@ -170,6 +197,8 @@ Collect the user's work activity for a given day (or date range) from all availa
 
    **Re-run on the same date**: overwrite the file. Add a header line `**Re-collection**: previous run superseded YYYY-MM-DD HH:MM:SS` (UTC) below the title so the user can see this is a re-collection, not a fresh first run.
 
+   **Gaps discipline**: `## Gaps` lists *inaccessible* sources only — sources that failed at runtime or were unavailable. A source returning **zero results** is **not** a gap; it's a successful query reflected in the absence of items under `## Activity`. DMs are universally inaccessible via MCP — the user is asked about them at the end (step 9), they are **not** listed in `## Gaps`. Typical valid Gap entries: `gh CLI not available`, `Google Drive MCP not available`, `Confluence: timed out on page 2 — partial coverage`, `Drive items {ids} surfaced via viewedByMeTime — authorship not confirmed`. Most files should have an empty Gaps section.
+
    ```markdown
    # My Activity: YYYY-MM-DD
 
@@ -177,7 +206,7 @@ Collect the user's work activity for a given day (or date range) from all availa
    **Sources checked**: Slack, Jira, Confluence, GitHub (gh CLI / N/A), Google Drive (MCP / N/A)
 
    ## Summary
-   [1-2 sentences: what was the focus today]
+   [1-2 sentences: what was the focus today. If a quiet day or PTO, say so.]
 
    ## Activity
 
@@ -191,7 +220,7 @@ Collect the user's work activity for a given day (or date range) from all availa
    - ...
 
    ## Gaps
-   - [sources that weren't accessible — e.g., "GitHub: gh CLI not available", "Google Drive: MCP not available", "DMs: not accessible via MCP"]
+   [Only pair-specific runtime issues. Empty if no source was inaccessible.]
    ```
 
 9. **Report to user**:

@@ -25,24 +25,50 @@ Synthesize a team member's recent activity from daily activity files into a stru
      Create one with your direct reports and their platform IDs.
      ```
    - Match the member name loosely (first name, full name, case-insensitive). If no match, list available names and ask.
+   - Compute `member-slug`: the matched member's full name lowercased, with non-alphanumerics replaced by `-` (e.g., "Alice Chen" → `alice-chen`). Used in input and output paths.
+   - Read the member's `**Level**:` field (e.g., `L5`).
+     - **If present** → use it.
+     - **If missing and interactive (user is at the keyboard)** → prompt: `"No level set for {Member Name} in team.md. What level are they? (e.g., L4)"`. After user responds, write the level back to team.md (fill-missing-only — never overwrite an existing value). Continue.
+     - **If missing and non-interactive (agent-driven)** → invoke `/log` with `status=WARNING detail=Level missing for {member-slug} in team.md — synthesis ran without level calibration`. Continue without the level-context block.
 
 3. **Load writing style**: Read the Writing Style section from `~/.claude/me/identity.md`. Apply it to all output. If no style is defined, default to clear and concise.
 
-4. **Determine time range**: Parse the arguments for a date range.
-   - If specified, use it (e.g., "last 2 weeks", "2026-03-28 to 2026-04-11")
-   - If not specified, default to last 1 week from today
-   - Convert to a list of workday dates
+4. **Load level expectations**: Read `.claude/docs/level-expectations.md` (project-scoped, shared reference).
+   - Extract the row matching the member's level from each section: Identity Anchor, Rating Signal, Impact, Scope, Direction, Problem Landscape, Execution & Craft, Collaboration & Communication, Growth & Citizenship, and (for managers) People Leadership.
+   - These will be surfaced in the prep header as "Level context" — calibration the manager reads alongside the observations.
+   - The local mirror is the contract — the skill does not fetch from any remote canonical (Confluence, Drive, Notion, wiki, etc.) at synthesis time. The mirror's own `Source:` header points at the canonical; manual sync when it changes.
+   - If `.claude/docs/level-expectations.md` is missing, log a `WARNING` via `/log` and continue without the level-context block.
 
-5. **Read activity files**: For each date in the range, look for:
-   - `.claude/memory/activity/YYYY-MM-DD-team-activity.md` — check for the member's section
+5. **Determine time range**: Parse the arguments for a date range.
+   - Explicit range (`YYYY-MM-DD to YYYY-MM-DD`): use as-is.
+   - Relative range (e.g., "last 2 weeks", "last 5 days"): N units back from today (ending today, inclusive).
+   - Default (no range argument): last 7 days back from today, inclusive.
+   - The output is a list of every date in the range — **do not pre-filter to workdays**. If a member worked on a weekend, the activity file exists at that date, and pre-filtering would miss it.
 
-   **If activity files are missing for some dates**, note which dates have no data in the output. Do not attempt to collect — that's `/collect-team-activity`'s job. If no activity files exist at all, **stop**:
-   ```
-   No activity data found for {member} in the requested period.
-   Run /collect-team-activity {member} for the missing dates first.
-   ```
+6. **Read activity files**: For each date in the range, look for:
+   - `.claude/memory/activity/collect-team-activity/<member-slug>/YYYY-MM-DD-<member-slug>-activity.md`
 
-6. **Synthesize**: Analyze all collected activity across the date range and produce four sections:
+   For each file found: parse the Markdown to extract the `Status:` header, the `## Summary` text, and each `## Activity` item with its category, time, sources, and context.
+
+   **Source-file `## Gaps` are collection metadata** — which sources were inaccessible at fetch time, runtime issues, "out of scope" notes. Do **not** propagate them into the prep. They are not 1:1 content. The activity items themselves are the synthesis material.
+
+   **Files with `Status: PARTIAL`** contribute their captured items to the synthesis exactly like SUCCESS files. PARTIAL is a **coverage signal**, not a discussion point — surface it in the output's `**Activity data**:` header (e.g., `5/5 dates covered (partial coverage on 2026-04-29: Confluence)`). Do not fabricate concerns about the failed source.
+
+   **Track missing dates** — dates in the range where no file exists. Quiet days, PTO, weekends, and "not collected" are all the same to this skill: the file isn't there.
+
+   **Status semantics**:
+   - **SUCCESS** — the skill produced an output file, regardless of how many dates had activity files. Partial coverage of the requested period is normal; reported in the output header, not the Status field.
+   - **FAILED** — the skill could not produce an output file: member not found in `team.md`, no activity files exist anywhere in the requested period, or the output path is unwritable. If no activity files exist at all, **stop** and report:
+     ```
+     No activity data found for {member} in the requested period.
+     Run /collect-team-activity {member} for the missing dates first.
+     ```
+
+7. **Synthesize**: Analyze all collected activity across the date range and produce four sections.
+
+   **Item-count discipline (applies to all sections):** Aim for the **5–10 most material items per section**, not an exhaustive log. A 1:1 prep is a starting point for conversation. If a section would exceed 10 items, group more aggressively or drop the lowest-impact ones.
+
+   **Descriptive-only constraint (applies to Patterns & Observations and Discussion Candidates):** This skill surfaces patterns visible in the data; it does **not** prescribe actions. Do not write recommendations like "raise a ticket", "loop in X", "rotate the credentials first", "escalate to Y". The skill lacks the surrounding context (who's already on a thread, what the team member has been told, what their current priorities are, who owns what) to make those judgements. Describe what the data shows; the manager decides the action.
 
    **Completed Tasks & Achievements**
    - Group by project or theme, not by date or activity category
@@ -51,81 +77,105 @@ Synthesize a team member's recent activity from daily activity files into a stru
 
    **In Progress / Open Items**
    - Group by project or theme
-   - Each item: current state, what's next, any blockers
+   - Each item: current state, what's next (only as visible from the data), any blockers (only as flagged in the source items)
    - Flag items that have been in progress across multiple days without visible movement
+   - **Distinguish authorship from ownership** — when surfacing a ticket, note whether the team member is the assignee or the reporter. "Assigned to {Name}, no movement since X" is a different observation from "Filed by {member}, assigned to {someone-else}".
 
-   **Areas for Improvement / Discussion Points**
-   - Identify patterns: stalled tickets, communication gaps, recurring blockers
-   - Frame constructively — these are conversation starters, not accusations
-   - Only include observations backed by data. Don't invent concerns.
+   **Patterns & Observations**
+   - Surface non-obvious patterns the data supports: stalled tickets, recurring categories, time-of-day patterns, cross-team coordination, sustained focus areas.
+   - **Descriptive only.** State what the data shows. Do not propose actions, framings, or escalations.
+   - Cite evidence (source links, date ranges, counts).
+   - Don't fabricate. If a pattern isn't supported by the data, don't include it.
 
-   **Key Talking Points**
-   - 3-5 high-level items to guide the meeting
-   - Prioritize: blockers first, recognition second, growth third
-   - Include anything that warrants a direct conversation rather than async follow-up
+   **Discussion Candidates**
+   - 3-5 topics surfaced by the data that the manager might consider raising — *might*, not *should*. The manager decides.
+   - Each candidate: a one-line description + the underlying observation reference.
+   - No prescribed order — order by data salience, not by category (blockers vs. recognition vs. growth — that's calibration the manager applies).
+   - Surface; don't editorialise.
 
-7. **Formatting rules**:
-   - Add the specific date to each point when available from the source data
-   - Jira tickets: always include the full ticket title + number, linked (e.g., `[PROJ-123 - Implement login screen](url)`)
+8. **Formatting rules**:
+   - Add the specific date to each point — activity files always carry ISO `Time:` stamps. Use the **local-date portion** (the date in the timezone offset shown), not the UTC date. For an item at `2026-04-12T01:30:00+04:00`, the date is `2026-04-12`, not `2026-04-11`.
+   - **Source link text: ticket key alone** (e.g., `[PLAT-808](url)`). Weave the title into the bullet text or context line where useful. Embedding full key+title in link text bloats bullets when titles are long.
    - Every claim must have a source link. No exceptions.
-   - Keep each bullet to 1-2 sentences max
-   - Writing tone follows `identity.md` — if not set, default to direct and clear
+   - Keep each bullet to 1-2 sentences max.
+   - Writing tone follows `identity.md` — if not set, default to direct and clear.
 
-8. **Write the output file**: Write to `.claude/memory/reports/1-1/{member-slug}/YYYY-MM-DD_to_YYYY-MM-DD-prep.md` where `member-slug` is the member's name in lowercase with hyphens (e.g., `alice-chen`) and the dates are the start and end of the activity period.
+9. **Write the output file**: Write to `.claude/memory/reports/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md` where `<member-slug>` is the slug computed in step 2 and the dates are the start and end of the activity period. Create parent directories if missing.
+
+   **Re-run on the same (member, period)**: overwrite the file. Add a header line `**Re-synthesis**: previous run superseded YYYY-MM-DD HH:MM:SS` (UTC) below the title so the user can see this is not a fresh first run.
 
    ```markdown
    # 1:1 Prep: {Member Name}
-   **Date**: YYYY-MM-DD
+   **Generated**: YYYY-MM-DD
    **Period**: YYYY-MM-DD to YYYY-MM-DD
-   **Activity data**: {X}/{Y} workdays covered ({list missing dates, if any})
+   **Level**: {Level} — {Identity Anchor for this level}
+   **Activity data**: {X}/{Y} dates covered ({list missing dates, if any})
+
+   ## Level context
+   _Calibration reference for {Level}, from `.claude/docs/level-expectations.md`. Read alongside the observations below._
+
+   - **Identity Anchor**: {full sentence}
+   - **Rating Signal**: {full sentence}
+   - **Impact**: {description for this level}
+   - **Scope**: {description for this level}
+   - **Direction**: {description for this level}
+   - **Problem Landscape**: {description for this level}
+   - **Execution & Craft**: {description for this level}
+   - **Collaboration & Communication**: {description for this level}
+   - **Growth & Citizenship**: {description for this level}
+   - **People Leadership** (managers only): {description for this level}
 
    ## Completed Tasks & Achievements
 
    ### {Project / Theme}
    - **{What was accomplished}** ({date})
-     - Sources: [PROJ-123 - Ticket title](url), [Slack thread](permalink)
+     - Sources: [PROJ-123](url), [Slack thread](permalink)
      - {Why it matters}
 
    ## In Progress / Open Items
 
    ### {Project / Theme}
    - **{Current state}** ({date})
-     - Sources: [PROJ-456 - Ticket title](url)
-     - Next: {what's expected}
+     - Sources: [PROJ-456](url) (assigned to {Name})
+     - Next: {what's visible from the data}
 
-   ## Areas for Improvement / Discussion Points
+   ## Patterns & Observations
 
-   - **{Observation}**
-     - Evidence: {source links}
-     - Suggested framing: {how to bring this up}
+   - **{Observation}** — descriptive, no prescriptions
+     - Evidence: {source links, dates, counts}
 
-   ## Key Talking Points
+   ## Discussion Candidates
 
-   1. {Most important item}
+   1. {Topic surfaced by the data — manager decides whether to raise}
    2. {Second}
    3. {Third}
    ```
 
-9. **Report to user** (skip if invoked by another agent):
-   ```
-   1:1 prep ready: {Member Name}
-   ──────────────────────────────
-   Period: YYYY-MM-DD to YYYY-MM-DD
-   Coverage: {X}/{Y} workdays with activity data
-   Missing: {dates without data, or "none"}
-   File: .claude/memory/reports/1-1/{member-slug}/YYYY-MM-DD_to_YYYY-MM-DD-prep.md
-   ```
+   If the level-context block can't be populated (no `Level:` for the member, or `.claude/docs/level-expectations.md` missing), omit the block entirely — the rest of the prep stays useful.
 
-10. **Logging**: On completion, invoke the `/log` skill:
+10. **Report to user** (skip if invoked by another agent):
     ```
-    /log run_id=<run_id> skill=one-on-one-prep status=<SUCCESS|FAILED> detail={member name}: {period}, {coverage}
+    1:1 prep ready: {Member Name} ({Level})
+    ──────────────────────────────
+    Period: YYYY-MM-DD to YYYY-MM-DD
+    Coverage: {X}/{Y} dates with activity data
+    Missing: {dates without data, or "none"}
+    Level context: {loaded / not loaded — reason}
+    File: .claude/memory/reports/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md
     ```
-    Use `manual` as run_id if invoked directly by the user.
+
+11. **Logging**: On completion, invoke the `/log` skill:
+    ```
+    /log run_id=<run_id> skill=one-on-one-prep status=<SUCCESS|FAILED|WARNING> detail={member name}: {period}, {coverage}
+    ```
+    Use `manual` as run_id if invoked directly by the user. Use `WARNING` if the prep was produced but the level-context block was omitted (missing `Level:` or missing local mirror).
 
 ## Important Rules
 
 - **Synthesis only.** This skill reads from `activity/` files. It never queries Slack, Jira, or any other data source directly.
+- **Descriptive, not prescriptive.** Surface patterns; the manager decides actions. No "raise a ticket", "loop in X", "rotate first" — the skill lacks the surrounding context to make those judgements.
 - **Every claim needs a source link.** Inherited from the activity files. If an activity item has no link, flag it as unverified.
-- **Don't fabricate concerns.** The "Areas for Improvement" section must be grounded in observable data patterns. No activity for a day is not a concern — it might mean the daily collection wasn't run.
+- **Don't fabricate observations.** Every Pattern & Observation must be supported by evidence in the activity files. No activity for a day is not a pattern — it might just mean the daily collection wasn't run.
+- **Distinguish authorship from ownership.** When commenting on ticket movement, note whether the team member is the assignee or the reporter. Tickets the member filed but doesn't own are different from tickets the member owns.
 - **Don't over-prepare.** A good 1:1 prep is a starting point for conversation, not a performance review. Keep it focused on what's worth discussing in person.
 - **Missing data is a note, not a failure.** If some days have no activity files, say so and move on. The prep is still useful with partial data.
