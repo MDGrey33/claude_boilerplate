@@ -22,7 +22,7 @@ You are conducting DEPTH research on a specific path identified during breadth s
 
 ## Output requirements
 
-Write your report to: `~/workspace/research/{{session_id}}/02-depth/agent-{{agent_id}}.md`
+Write your report to: `<workspace>/research/{{session_id}}/02-depth/agent-{{agent_id}}.md`
 
 Structure:
 ```markdown

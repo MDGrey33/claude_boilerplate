@@ -31,7 +31,7 @@ You are filling a specific knowledge gap identified during synthesis. Your scope
 
 ## Output requirements
 
-Write your report to: `~/workspace/research/{{session_id}}/04-gap-fill/gap-{{gap_id}}.md`
+Write your report to: `<workspace>/research/{{session_id}}/04-gap-fill/gap-{{gap_id}}.md`
 
 Structure:
 ```markdown

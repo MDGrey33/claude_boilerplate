@@ -27,7 +27,7 @@ If your angle is "academic":
 
 ## Output requirements
 
-Write your report to: `~/workspace/research/{{session_id}}/01-breadth/agent-{{agent_id}}.md`
+Write your report to: `<workspace>/research/{{session_id}}/01-breadth/agent-{{agent_id}}.md`
 
 Structure:
 ```markdown
@@ -74,7 +74,7 @@ Every single claim in your report MUST be tagged inline using the rubric below. 
 
 ### Evidence ledger
 
-For EVERY claim, also append a JSON line to: `~/workspace/research/{{session_id}}/corpus/evidence-ledger.jsonl`
+For EVERY claim, also append a JSON line to: `<workspace>/research/{{session_id}}/corpus/evidence-ledger.jsonl`
 
 ```json
 {
