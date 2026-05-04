@@ -37,7 +37,7 @@ The materiality label determines failure-policy weight (see "Failure thresholds"
 
 ## Output
 
-Write `~/workspace/research/{{session_id}}/07-fact-check.md` with the claim audit table — every claim, every check.
+Write `<workspace>/research/{{session_id}}/07-fact-check.md` with the claim audit table — every claim, every check.
 
 Structure:
 
@@ -93,7 +93,7 @@ What this stage adds on top of those canonical thresholds:
 - **Peripheral failures never abort** — they get logged in the audit table and either fixed or dropped silently.
 
 When pipeline aborts:
-- Write failure report to `~/workspace/inbox/deep-research-FAILURE-<topic>-<date>.md`
+- Write failure report to `<workspace>/inbox/deep-research-FAILURE-<topic>-<date>.md`
 - Tell the user: corpus is too weak to support a theory at acceptable rigor
 - Recommend: more breadth, different research question, or accept lower-confidence output
 

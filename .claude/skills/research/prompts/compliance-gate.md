@@ -7,7 +7,7 @@ The gate REJECTS subagent output that doesn't meet the contract. Rejected agents
 ---
 
 ## Inputs
-- Directory of subagent reports just produced (e.g., `~/workspace/research/<session>/01-breadth/`)
+- Directory of subagent reports just produced (e.g., `<workspace>/research/<session>/01-breadth/`)
 - Lines appended to `corpus/evidence-ledger.jsonl` since last gate
 - Manifest of dispatched agent IDs
 
@@ -40,7 +40,7 @@ The gate REJECTS subagent output that doesn't meet the contract. Rejected agents
 
 ## Output
 
-Write `~/workspace/research/<session>/<stage>-compliance.md` with:
+Write `<workspace>/research/<session>/<stage>-compliance.md` with:
 - Per-agent pass/fail
 - Specific violations (file path + line if JSONL)
 - Re-dispatch decisions
@@ -53,4 +53,4 @@ Update `run-manifest.json` with stage status.
 - **All pass** → proceed to next stage
 - **Some fail, recoverable** → re-dispatch failed agents once with tightened prompt highlighting the violations. Wait for retry, re-validate.
 - **Re-dispatch fails again** → drop the agent's contribution, log it, proceed if remaining agents meet the minimum (≥ 3 breadth agents accepted, ≥ 2 depth agents, ≥ 1 gap-fill per gap)
-- **Below minimum after retries** → ABORT pipeline, write failure report to `~/workspace/inbox/`
+- **Below minimum after retries** → ABORT pipeline, write failure report to `<workspace>/inbox/`
