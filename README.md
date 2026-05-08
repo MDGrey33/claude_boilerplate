@@ -29,8 +29,12 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 
 ## Skills Reference
 
+> **v2 workspace setup (new, in progress):** `/setup-workspace init` deploys this boilerplate into a workspace folder you choose, alongside skills/agents/identity/registry. `/project-registry` manages projects registered under the workspace. Both are additive — pre-v2 single-project usage continues to work; v2 layers a workspace concept on top.
+
 | Skill | Trigger | Purpose |
 |-------|---------|---------|
+| `/setup-workspace` | Manual | (v2) First-time workspace setup; deploys skills/agents/docs from source, scaffolds the workspace, generates `CLAUDE.md` from template. Future actions: `add-project`, `sync`. |
+| `/project-registry` | Auto (via `/setup-workspace`) or manual | (v2) Manage the workspace project registry — `add` / `remove` / `update` / `list`. Single mutation point; other skills read the index file directly. |
 | `/hello` | Manual | Start a new session — load context, check MCP health, recap last session |
 | `/bye` | Manual | End the session — summarize work, capture lessons, persist memory |
 | `/lessons` | Auto (via `/bye`) or manual | Capture lessons (default) OR `scan` recent session files / `scan --deep` raw JSONL for skill-change proposals |
