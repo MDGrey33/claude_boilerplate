@@ -46,6 +46,7 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 | `/sanitizer` | Auto (via `/contribute`, `/pull-contributions`) or manual | Scrub files for secrets, PII, private context, tone risks before publish. `--check` mode for CI gates. |
 | `/finance-controller` | Manual (weekly sweep) | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Reports + delegates; never edits directly. |
 | `/claude-expert` | Manual | Reference for Claude Code surfaces (skills vs hooks vs subagents vs MCPs vs memory vs settings). Answers "where should this live" and routes to the doer skill. |
+| `/setup-auto-memory` | Manual | Wire in the optional auto-memory system (typed atomic files in `~/.claude/projects/<slug>/memory/`). See `auto-memory/README.md`. |
 
 ### Skill Chains
 
@@ -140,6 +141,16 @@ For engineering managers, directors, and VPs — driven by `~/.claude/me/identit
 - **`/collect-team-activity`** — collects a team member's daily activity from public Slack, Jira, Confluence, GitHub
 - **`/one-on-one-prep`** — synthesizes collected activity into a structured 1:1 meeting agenda
 - **`/collect-my-activity`** — works for any role, collects your own activity across all sources
+
+## Optional: Auto-Memory System
+
+This boilerplate also ships an opt-in **auto-memory** package at `auto-memory/`. It complements the project-scope memory above with a user-scope, typed-atomic-file system that lives under `~/.claude/projects/<slug>/memory/` — the directory Claude Code's harness already manages per project.
+
+The two layers serve different purposes: project memory holds curated repo knowledge shared with collaborators; auto-memory holds personal preferences and behavioral feedback that follow the user across projects.
+
+To wire it in, run `/setup-auto-memory` from any project. It is gated, idempotent, and never touches the project-scope memory.
+
+See `auto-memory/README.md` for the full description.
 
 ## Customization
 

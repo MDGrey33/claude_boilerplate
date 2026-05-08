@@ -1,0 +1,11 @@
+<!--
+This is the index for your auto-memory directory.
+
+Each entry below points to a single typed memory file in this folder.
+Format: `- [Title](file.md) — one-line hook`
+
+Keep this index under ~40 entries. Use the `memory-hygiene` skill to audit and prune.
+
+Do NOT write memory content directly into this file — it's just an index.
+-->
+
