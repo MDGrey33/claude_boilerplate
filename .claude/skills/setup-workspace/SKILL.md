@@ -1,65 +1,54 @@
 ---
 name: setup-workspace
-description: Initialise a workspace, register projects under it, or sync upstream changes. Single entry point for workspace lifecycle. Run from the workspace root (`cwd` = workspace).
+description: Initialise a workspace, register projects under it, or sync upstream changes. Single entry point for workspace lifecycle.
 user_invocable: true
 args: |
   Pick a mode based on user intent:
-  - `init [--workspace <path>] [--source <path>] [--dry-run]` — first-time workspace setup. Auto-detects workspace and source from cwd when invoked from inside the boilerplate clone (`<workspace>/source/<repo>/`) or from the workspace root (with `source/<v2-boilerplate>/` underneath). Pass flags explicitly to override. `--dry-run` previews what would be created/skipped without writing anything.
-  - `add-project <slug> [description]` — scaffold a project under `<workspace>/projects/<slug>/` and register it via `/project-registry add`.
+  - `init --workspace <path> [--source <path>] [--dry-run]` — first-time workspace setup. Run from inside the cloned boilerplate folder; pass `--workspace` to point at the target. `--source` defaults to cwd when cwd is a v2 boilerplate; pass it explicitly only when running from elsewhere. `--dry-run` previews what would be created/skipped without writing anything.
+  - `add-project <slug> [description]` — scaffold a project under `<workspace>/projects/<slug>/` and register it via `/project-registry add`. Run from the workspace root.
   - `sync` — pull upstream skill/agent updates from source. Diff-detects local changes and asks before overwriting.
 ---
 
 # /setup-workspace
 
-Owns workspace lifecycle: `init` (first-time setup), `add-project` (register a project), and `sync` (update from source). Run from the workspace root.
+Owns workspace lifecycle: `init` (first-time setup), `add-project` (register a project), and `sync` (update from source).
 
 ## Workspace conventions
 
-- Workspace = `cwd`. The user always starts Claude from the workspace root.
-- Boilerplate source lives at `<workspace>/source/<repo>/`. Cloned manually before `init` (v1).
+- **Sibling layout.** The boilerplate source clone and the workspace live at sibling paths — for example, `~/src/claude_boilerplate/` and `~/workspace/`. Source must NOT live inside the workspace, and the workspace must NOT live inside the source. `init` refuses if the layout is wrong.
+- **Init runs once from the source clone.** After init, the user works from the workspace; the source clone stays around for `/setup-workspace sync` (upstream updates).
+- **Workspace = `cwd` for `add-project`, `sync`, and ongoing work.**
 - Per v2 design principles: skills, agents, identity, brag log, MCP server configs, and the project registry all live in the workspace.
 
-## `init [--workspace <path>] [--source <path>]`
+## `init --workspace <path> [--source <path>]`
 
 First-time workspace setup.
 
-### The chicken-and-egg
+### Why init runs from the source clone
 
-Before init, the user's intended workspace folder is empty — `/setup-workspace` doesn't yet live at `<workspace>/.claude/skills/`. So init is invoked from the boilerplate clone itself, where the skill is present. Init then deploys the skill (and everything else) into the workspace. After init, the user `cd`s to the workspace and works from there.
+Before init, the workspace's `.claude/skills/` is empty — `/setup-workspace` doesn't exist there yet. So init is invoked from a Claude session started inside the cloned boilerplate, where the skill is already present. Init then deploys the skill (and everything else) into the target workspace. After init, the user starts fresh sessions from the workspace.
 
-### Two invocation styles (both auto-detected)
+### Invocation
 
-**Style A — from inside the source clone (recommended for first-time bootstrap):**
 ```
-cd <workspace>/source/<v2-boilerplate>/
+cd ~/src/claude_boilerplate          # or wherever you cloned it
 claude
-/setup-workspace init
-```
-Workspace inferred as cwd's grandparent (per the `<workspace>/source/<repo>/` convention). Source = cwd.
-
-**Style B — from the workspace root (works after init has deployed the skill):**
-```
-cd <workspace>/
-claude
-/setup-workspace init
-```
-Workspace = cwd. Source auto-detected by scanning `<workspace>/source/` for a v2 boilerplate.
-
-**Style C — explicit flags (works from anywhere):**
-```
-/setup-workspace init --workspace ~/my-space --source ~/Downloads/claude_boilerplate
+/setup-workspace init --workspace ~/workspace
 ```
 
-A v2 boilerplate is identified by the marker file `.claude/skills/setup-workspace/templates/workspace-CLAUDE.md.tmpl`. Auto-detection refuses if it's ambiguous (multiple boilerplates under `source/`) or impossible (cwd doesn't match any pattern); the user passes flags explicitly to disambiguate.
+`--source` defaults to cwd. Pass `--source <path>` only when running from somewhere other than the source clone.
+
+A v2 boilerplate is identified by the marker file `.claude/skills/setup-workspace/templates/workspace-CLAUDE.md.tmpl`. `init` refuses if cwd is not a v2 boilerplate and `--source` is not provided.
 
 ### Prerequisites
 
-- A v2 boilerplate cloned somewhere reachable (e.g., `<workspace>/source/<repo>/`). If `source/` doesn't exist or is empty, init refuses with a hint to clone first.
-- Confirm the detected workspace and source with the user before invoking the script (the agent reads the detected paths from script output and asks).
+- The boilerplate cloned to a folder OUTSIDE the intended workspace (e.g., `~/src/claude_boilerplate/`).
+- The target workspace folder exists (`mkdir -p ~/workspace` if needed).
+- Confirm workspace and source paths with the user before invoking the script (the agent reads the values from script output and asks).
 
 ### Dry run
 
-Pass `--dry-run` to preview what init would do without writing anything. The script prints the same created/skipped summary, prefixed with `[DRY RUN]`. Useful when the user is uncertain and wants to verify the detection and plan first. The agent should default to running `--dry-run` first when the user hasn't confirmed paths, then re-run without it after confirmation.
+Pass `--dry-run` to preview what init would do without writing anything. The script prints the same created/skipped summary, prefixed with `[DRY RUN]`. Useful when the user wants to verify the plan before committing. The agent should default to running `--dry-run` first when paths haven't been confirmed, then re-run without it.
 
 ### Behavior
 
@@ -70,7 +59,7 @@ The init action is **idempotent**. Re-running is safe:
 
 ### Steps
 
-1. **Resolve workspace and source.** Auto-detect per the styles above, or use explicit `--workspace` / `--source` flags. The script's first output lines print what it detected — confirm with the user before proceeding.
+1. **Resolve workspace and source.** `--workspace` is required; `--source` defaults to cwd when cwd is a v2 boilerplate. The script validates the sibling layout (refuses if source and workspace overlap) and prints both paths — confirm with the user before proceeding.
 2. **Create scaffolding** (idempotent):
    - At workspace root: `workstreams/`, `sessions/active/`, `artifacts/`, `me/`.
    - Under `.claude/`: `memory/`, `skills/`, `agents/`, `docs/`.
@@ -95,10 +84,10 @@ The init action is **idempotent**. Re-running is safe:
 The init action is delegated to `scripts/init.py`:
 
 ```
-python3 <source>/.claude/skills/setup-workspace/scripts/init.py [--workspace <path>] [--source <path>]
+python3 .claude/skills/setup-workspace/scripts/init.py --workspace <path> [--source <path>] [--dry-run]
 ```
 
-When invoked from Style A (cwd is source clone), the relative path `python3 .claude/skills/setup-workspace/scripts/init.py` works. From Style B/C, use the full path to the script in the source.
+When run from cwd = source clone (the recommended flow), the relative path above works. From elsewhere, use the absolute path to the script in the source.
 
 ## `add-project <slug> [description]`
 

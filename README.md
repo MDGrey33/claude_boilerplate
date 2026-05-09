@@ -29,7 +29,18 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 
 ## Skills Reference
 
-> **v2 workspace setup (new, in progress):** `/setup-workspace init` deploys this boilerplate into a workspace folder you choose, alongside skills/agents/identity/registry. `/project-registry` manages projects registered under the workspace. Both are additive — pre-v2 single-project usage continues to work; v2 layers a workspace concept on top.
+> **v2 workspace setup (new, in progress):** the boilerplate is installed into a workspace folder of your choice via `/setup-workspace init`. The cloned source and the workspace must live at sibling paths (e.g., `~/src/claude_boilerplate/` and `~/workspace/`) — never one inside the other. After init, work happens in the workspace; the source clone stays around for `/setup-workspace sync`. `/setup-workspace add-project` scaffolds projects under the workspace and registers them. `/project-registry` manages the registry directly. All v2 changes are additive — pre-v2 single-project usage continues to work.
+>
+> Quick start (v2):
+> ```
+> # one-time setup
+> git clone https://github.com/MDGrey33/claude_boilerplate.git ~/src/claude_boilerplate
+> mkdir -p ~/workspace
+> cd ~/src/claude_boilerplate
+> claude
+> # in the session: /setup-workspace init --workspace ~/workspace
+> # exit, then start fresh sessions from ~/workspace going forward
+> ```
 
 | Skill | Trigger | Purpose |
 |-------|---------|---------|
