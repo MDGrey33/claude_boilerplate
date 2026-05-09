@@ -33,7 +33,7 @@ Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/
 
 | Skill | Trigger | Purpose |
 |-------|---------|---------|
-| `/setup-workspace` | Manual | (v2) First-time workspace setup; deploys skills/agents/docs from source, scaffolds the workspace, generates `CLAUDE.md` from template. Future actions: `add-project`, `sync`. |
+| `/setup-workspace` | Manual | (v2) Workspace lifecycle: `init` (first-time setup, deploys skills/agents/docs, generates `CLAUDE.md`), `add-project <slug> [description]` (scaffolds a project under `<workspace>/projects/<slug>/`, registers it). Future action: `sync`. |
 | `/project-registry` | Auto (via `/setup-workspace`) or manual | (v2) Manage the workspace project registry — `add` / `remove` / `update` / `list`. Single mutation point; other skills read the index file directly. |
 | `/hello` | Manual | Start a new session — load context, check MCP health, recap last session |
 | `/bye` | Manual | End the session — summarize work, capture lessons, persist memory |

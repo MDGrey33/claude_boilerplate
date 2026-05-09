@@ -102,7 +102,63 @@ When invoked from Style A (cwd is source clone), the relative path `python3 .cla
 
 ## `add-project <slug> [description]`
 
-*(To be built in build-plan step 5. Not yet implemented.)*
+Scaffold a project under `<workspace>/projects/<slug>/` and register it via `/project-registry add`.
+
+### Inputs
+
+- `<slug>` — required. Lowercase + hyphens; must start with a letter. Same shape as `/project-registry add`.
+- `<description>` — optional one-line. Stored on the registry entry and substituted into the project's `CLAUDE.md`.
+
+### Prerequisites
+
+- `cwd = workspace`. The user is at the workspace root.
+- `<workspace>/projects/<slug>/` already exists. `add-project` does NOT create the project root — the user creates it first, either as a fresh dir or as a symlink to an existing repo:
+  ```
+  mkdir <workspace>/projects/<slug>                       # fresh project
+  ln -s /path/to/repo <workspace>/projects/<slug>         # symlink existing
+  ```
+  Keeps the boilerplate out of physical placement decisions.
+
+### Dry run
+
+Pass `--dry-run` to preview what would be created/skipped without writing anything. Particularly useful when the project dir is a symlink to an existing repo: confirms whether an existing `CLAUDE.md` or `.gitignore` would be preserved, and which gitignore patterns would be appended.
+
+### Behavior
+
+The action is **idempotent**. Re-running is safe:
+- Existing files (`CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `settings.json`) are preserved — never overwritten.
+- `.gitignore` is created fresh if missing, or appended in-place with only the patterns it lacks (line-by-line check).
+- `/project-registry add` is skipped when the slug is already registered.
+
+### Steps
+
+1. **Pre-flight checks:**
+   - cwd looks like a v2 workspace (has `.claude/skills/setup-workspace/`).
+   - slug matches `^[a-z][a-z0-9-]*$`.
+   - `<workspace>/projects/<slug>/` exists (real dir or symlink).
+2. **Create directories at the project root:** `workstreams/`, `sessions/active/`, `artifacts/`, `.claude/memory/`. Skip if exists.
+3. **Write starter files** (skip if exists):
+   - `.claude/memory/MEMORY.md` — empty header.
+   - `.claude/memory/lessons-learned.md` — empty header.
+   - `.claude/settings.json` — empty `{}`. Project-level allowlists evolve here as the project's needs surface; user-specific layers go into `settings.local.json` (gitignored).
+4. **Generate `CLAUDE.md`** from `templates/project-CLAUDE.md.tmpl` with `{{project_name}}` and `{{description}}` substituted. Skip if exists (typical when symlinking to a real repo that already has its own CLAUDE.md).
+5. **Update `.gitignore`** at the project root: append `workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/`. Idempotent — line-by-line check; only missing patterns are added.
+6. **Register via `/project-registry add`** — the registry receives `<slug> [description]`. Skipped when the slug is already registered.
+7. **Print summary:** what was created, what was skipped.
+
+### Why `collected/` and `contributions/` aren't scaffolded
+
+These dirs are created by their owning skills on first use (mirrors the `init` pattern at the workspace level). Pre-creating empty dirs pollutes `git status` until something actually lands in them; deferring keeps the project clean until the dir is actually needed.
+
+### Implementation
+
+The add-project action is delegated to `scripts/add_project.py`:
+
+```
+python3 .claude/skills/setup-workspace/scripts/add_project.py <slug> [description] [--dry-run]
+```
+
+The script handles validation, idempotent scaffolding, template substitution, and the registry call. Output goes to stdout in human-readable form.
 
 ## `sync`
 
