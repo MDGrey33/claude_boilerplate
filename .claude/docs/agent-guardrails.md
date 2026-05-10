@@ -12,6 +12,7 @@ Apply to any agent — main session or autonomous sub-agent.
 - **Don't fabricate.** Only report what you find in data sources. Flag uncertainty rather than guessing.
 - **Every report claim needs a source link.** Unverified items are flagged, not presented as fact.
 - **Maximize parallelization.** Run independent operations concurrently when there are no data dependencies.
+- **Active session context comes from the session marker, never from cwd.** Skills that need the active project, workstream, or open item read `<workspace>/sessions/active/<id>.md` (workspace-level) or `<workspace>/projects/<slug>/sessions/active/<id>.md` (project-scoped). Do not derive from `pwd`, the Bash tool's reported cwd, or path inspection — these drift mid-session as Claude or the user navigate the filesystem (cd into a subdir to run tests, grep across projects, inspect fixtures), and a cwd-derived lookup will silently misroute writes. The only exception is `/hello` at session start, which may use cwd as a confirmation hint to suggest a likely project; the user always confirms, and the marker becomes the source of truth from that moment.
 
 ## Session-agent rules
 
