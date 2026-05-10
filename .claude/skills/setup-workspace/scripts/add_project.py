@@ -50,6 +50,23 @@ LESSONS_STARTER = (
     "# Lessons Learned\n\n"
     "Raw lessons inbox. Promoted to MEMORY.md once stable; pruned when promoted.\n"
 )
+PROJECT_CONTEXT_STARTER = """# Project Context
+
+<!--
+Project-level domain context — what this project is, who uses it,
+constraints, and what "done" looks like.
+
+This file loads every session, so keep it short — essential context only.
+Detailed reference belongs in .claude/docs/architecture.md and
+.claude/docs/conventions.md.
+
+Good entries: business domain concepts, key constraints, who the users
+are, what "done" looks like for this project.
+
+Bad entries: file paths, code patterns, git history (Claude can read
+those directly).
+-->
+"""
 SETTINGS_STARTER = "{}\n"
 
 # Module-level state set by main()
@@ -157,6 +174,13 @@ def deploy_starters(slug: str, created: list, skipped: list) -> None:
         pdir / ".claude/memory/lessons-learned.md",
         LESSONS_STARTER,
         f"projects/{slug}/.claude/memory/lessons-learned.md",
+        created,
+        skipped,
+    )
+    write_starter(
+        pdir / ".claude/memory/project-context.md",
+        PROJECT_CONTEXT_STARTER,
+        f"projects/{slug}/.claude/memory/project-context.md",
         created,
         skipped,
     )

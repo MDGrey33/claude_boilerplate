@@ -55,7 +55,7 @@ Pass `--dry-run` to preview what init would do without writing anything. The scr
 The init action is **idempotent**. Re-running is safe:
 - Skills, agents, and `agent-guardrails.md` are **overwritten** from source (always fresh — these are upstream-owned).
 - Other docs (`architecture.md`, `conventions.md`, `cognee-usage.md`, etc.) are deployed only if missing in the workspace (templates, evolved by the user after init).
-- `CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `me/*.md`, `.gitignore`, `settings.json` are deployed only if missing — never overwritten.
+- `CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `project-context.md`, `me/*.md`, `.gitignore`, `settings.json` are deployed only if missing — never overwritten.
 
 ### Steps
 
@@ -72,6 +72,7 @@ The init action is **idempotent**. Re-running is safe:
 5. **Deploy starter files** (skip if exists):
    - `<workspace>/.claude/memory/MEMORY.md` — empty header.
    - `<workspace>/.claude/memory/lessons-learned.md` — empty header.
+   - `<workspace>/.claude/memory/project-context.md` — workspace-level domain context template (user fills in).
    - `<workspace>/me/identity.md` — placeholder profile (user fills in).
    - `<workspace>/me/brag-log.md` — empty header.
    - `<workspace>/me/growth.md` — empty header.
@@ -115,7 +116,7 @@ Pass `--dry-run` to preview what would be created/skipped without writing anythi
 ### Behavior
 
 The action is **idempotent**. Re-running is safe:
-- Existing files (`CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `settings.json`) are preserved — never overwritten.
+- Existing files (`CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `project-context.md`, `settings.json`) are preserved — never overwritten.
 - `.gitignore` is created fresh if missing, or appended in-place with only the patterns it lacks (line-by-line check).
 - `/project-registry add` is skipped when the slug is already registered.
 
@@ -129,6 +130,7 @@ The action is **idempotent**. Re-running is safe:
 3. **Write starter files** (skip if exists):
    - `.claude/memory/MEMORY.md` — empty header.
    - `.claude/memory/lessons-learned.md` — empty header.
+   - `.claude/memory/project-context.md` — project-level domain context template (user fills in: business domain, users, constraints, what "done" looks like).
    - `.claude/settings.json` — empty `{}`. Project-level allowlists evolve here as the project's needs surface; user-specific layers go into `settings.local.json` (gitignored).
 4. **Generate `CLAUDE.md`** from `templates/project-CLAUDE.md.tmpl` with `{{project_name}}` and `{{description}}` substituted. Skip if exists (typical when symlinking to a real repo that already has its own CLAUDE.md).
 5. **Update `.gitignore`** at the project root: append `workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/`. Idempotent — line-by-line check; only missing patterns are added.
