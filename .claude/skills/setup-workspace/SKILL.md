@@ -153,12 +153,51 @@ The script handles validation, idempotent scaffolding, template substitution, an
 
 ## `sync`
 
-*(To be built in build-plan step 8. Not yet implemented.)*
+Update upstream-owned content (`.claude/skills/`, `.claude/agents/`, `.claude/docs/agent-guardrails.md`) in the workspace from the source clone. Conservative — detects local changes and asks for consent before overwriting.
+
+### When to use
+
+After the user pulls upstream changes into the source clone (e.g., `cd ~/src/claude_boilerplate && git pull`) and wants those changes reflected in the workspace.
+
+### Inputs
+
+- `--workspace <path>` — required. The target workspace.
+- `--source <path>` — optional. Defaults to the path stored in `<workspace>/.claude/.source` by `init`. Pass explicitly only if the source clone has moved or if `.source` is missing.
+
+### Behavior
+
+The action is **conservative** (unlike `init`, which overwrites upstream-owned content unconditionally):
+
+- Walks `.claude/skills/**`, `.claude/agents/**`, and `.claude/docs/agent-guardrails.md`.
+- Compares each file byte-for-byte between source and workspace.
+- Reports four categories: `unchanged`, `update` (workspace differs), `new` (in source, not workspace), `local-only` (in workspace, not source — user-added).
+- Asks the user which `update` + `new` files to apply. `local-only` files are never touched.
+- Does NOT touch `CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `project-context.md`, identity, brag log, growth, team, workstreams, sessions, settings.json, or other `docs/*` templates.
+
+### Steps
+
+1. **Pre-flight:** confirm cwd is the workspace (`.claude/.workspace` present). Resolve source via `--source` or `.claude/.source`.
+2. **Run the planner:** `python3 .claude/skills/setup-workspace/scripts/sync.py --workspace <path> [--source <path>]`. The script prints a structured plan with file paths grouped by category.
+3. **Show the user the plan.** For non-empty `update` and `new` sections, ask:
+   - Apply all (`--apply-all`)?
+   - Apply specific files (collect a list of relative paths)?
+   - Show a diff for any file before deciding (use `diff <source>/<path> <workspace>/<path>` or the Read tool)?
+   - Skip entirely?
+4. **Apply chosen changes:** re-run `sync.py` with `--apply-all` or `--apply <relpath>...`. The script copies source-version files to the workspace and prints what was applied.
+5. **Print summary:** what was applied, what was kept, what remains as `local-only` (so the user knows their custom additions are preserved).
+
+### Implementation
+
+```
+python3 .claude/skills/setup-workspace/scripts/sync.py --workspace <path> [--source <path>] [--apply <relpath>...] [--apply-all]
+```
+
+Default mode (no `--apply` flags) prints the plan only.
 
 ## Important rules
 
 - **Idempotent.** Re-running any action is safe.
 - **Never overwrite user content.** CLAUDE.md, MEMORY.md, lessons-learned.md, identity, brag log, growth, gitignore, settings.json — once present, stay as the user has them.
-- **Always overwrite upstream-owned content.** Skills, agents, agent-guardrails.md — these are the boilerplate's contract; staleness is worse than slight churn.
+- **Init overwrites upstream-owned content; sync asks.** Skills, agents, agent-guardrails.md are the boilerplate's contract — `init` overwrites them unconditionally (first-time setup, no local edits to protect). `sync` is conservative: detects local edits and asks the user before overwriting (workspace has evolved since init).
 - **Refuse, don't guess.** If the source can't be uniquely identified, fail with a clear hint rather than picking arbitrarily.
 - **No project scaffolding here.** That's `/setup-workspace add-project`'s job, not `init`'s.

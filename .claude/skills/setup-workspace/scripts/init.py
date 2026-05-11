@@ -158,6 +158,25 @@ def write_workspace_marker(created: list, skipped: list) -> None:
     created.append(".claude/.workspace")
 
 
+def write_source_ref(source: Path, created: list, skipped: list) -> None:
+    """Record the source path so /setup-workspace sync can find it without --source."""
+    ref = workspace() / ".claude" / ".source"
+    if ref.exists():
+        existing = ref.read_text().strip()
+        if existing == str(source):
+            skipped.append(".claude/.source (already points at source)")
+            return
+        # Source path has changed; update it.
+        if not is_dry_run():
+            ref.write_text(str(source) + "\n")
+        created.append(f".claude/.source (updated: {existing} -> {source})")
+        return
+    if not is_dry_run():
+        ref.parent.mkdir(parents=True, exist_ok=True)
+        ref.write_text(str(source) + "\n")
+    created.append(".claude/.source")
+
+
 def deploy_dir(src: Path, dst: Path, overwrite: bool, created: list, skipped: list, label: str) -> None:
     """Copy contents of src into dst. If overwrite, dst entries are replaced."""
     if not src.is_dir():
@@ -332,6 +351,7 @@ def main() -> None:
 
     create_dirs(created, skipped)
     write_workspace_marker(created, skipped)
+    write_source_ref(source, created, skipped)
     deploy_dir(source / ".claude/skills", _WORKSPACE / ".claude/skills", overwrite=True, created=created, skipped=skipped, label="skills")
     deploy_dir(source / ".claude/agents", _WORKSPACE / ".claude/agents", overwrite=True, created=created, skipped=skipped, label="agents")
     deploy_agent_guardrails(source, created, skipped)
