@@ -71,18 +71,21 @@ Identity:   loaded / placeholder
 
 ### 7. Resolve project (open-ended)
 
-Phrasing branches on the cwd hint:
+Phrasing branches on the cwd hint. In every variant, be honest about inference and invite explicit override — never imply the model deterministically knows whether work "is a project":
 
-- **Workspace-level hint** → "What are you working on today?"
-- **Registered-project hint** → "Looks like you're in `<slug>`. Continuing on that, or working on something else today?"
-- **Unregistered-project hint** → "`<slug>` isn't registered yet. Want me to register and scaffold it now? (Calls `/setup-workspace add-project`.)"
+- **Workspace-level hint** → "What are you working on today? I'll infer whether to treat it as project work or workspace-level work and confirm before proceeding. You can also explicitly say 'register a new project' or 'this is a one-off task' to skip the inference."
+- **Registered-project hint** → "Looks like you're in `<slug>`. Continuing on that, or working on something else today? (If something else, I'll infer the scope and confirm — or you can ask me to register a new project.)"
+- **Unregistered-project hint** → "`<slug>` isn't registered yet. Want me to register and scaffold it now (calls `/setup-workspace add-project`), or are you treating this as a one-off?"
 
 Resolution rules — match the registry first:
 
 1. **Semantic match against registered slugs and descriptions.** If a plausible match exists, confirm with the user ("That sounds like `<slug>` — continue there?"). The registry is the source of truth for whether work belongs to a project; topic shape (personal, cross-cutting, leadership update, team activity, 1:1 prep, etc.) is not a signal to skip the registry — users may register a project (e.g., `my-work`) precisely for that work.
 2. **Ambiguity** between two or more registered projects → ask one clarifying question.
-3. **No match, user describes a new project** → fall through to step 8 (new-project handling).
-4. **No match, user confirms it's not project-bound** → set scope = workspace-level. Workspace-level is the fallback when no project fits — never the default for a topic shape.
+3. **Explicit user override.** If the user explicitly says "register a new project" / "create a project" / "one-off task" / similar, honour that immediately without further inference. Explicit override always beats inference.
+4. **No match, user describes a new project** → fall through to step 8 (new-project handling).
+5. **No match, user confirms it's not project-bound** → set scope = workspace-level. Workspace-level is the fallback when no project fits — never the default for a topic shape.
+
+**Empty registry caveat.** When no projects are registered, paths 1–2 are unreachable; the resolver collapses to inference (paths 3–5) with no anchored confirmation. State this honestly in the question rather than pretending registry-backed matching is happening.
 
 ### 8. New-project handling
 
