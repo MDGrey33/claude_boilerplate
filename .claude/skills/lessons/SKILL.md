@@ -23,6 +23,22 @@ You operate in one of two modes, dispatched by the first argument:
 
 ---
 
+## Resolve scope (every mode)
+
+Before dispatching to a mode, locate the workspace and resolve scope from the active session marker.
+
+The skill's base directory is `<workspace>/.claude/skills/lessons/`; resolve `<workspace>` by walking up three directory levels and validate that `<workspace>/.claude/.workspace` exists.
+
+Scan active markers from `<workspace>/sessions/active/*.md` and `<workspace>/projects/*/sessions/active/*.md`. Parse frontmatter (`project_slug`, `workstream_slug`, `session_id`).
+
+- One match → scope is `<workspace>` if `project_slug = workspace`, else `<workspace>/projects/<project_slug>`.
+- >1 matches → ask the user which session this invocation is scoped to.
+- 0 matches → if invoked by `/bye`, surface as a bug and abort. If invoked manually, ask the user for scope (workspace or which project).
+
+Modes A and B use `<scope>` for input/output paths. Mode C is workspace-wide; the marker is read for scope-attribution decoration only.
+
+---
+
 ## Mode A: CAPTURE (default)
 
 Triggered when the arg is absent or is free text (not starting with `scan`).
@@ -43,7 +59,7 @@ Lessons in capture mode come from:
    - `architecture` — structural decisions, design patterns
    - `tool-usage` — tips for tools, CLIs, MCP servers, frameworks
 
-3. **Append to lessons file**: Read `.claude/memory/lessons-learned.md`, then append each lesson under the appropriate category section with this format:
+3. **Append to lessons file**: Read `<scope>/.claude/memory/lessons-learned.md` with mtime capture, then append each lesson under the appropriate category section with this format:
 
    ```markdown
    - **[YYYY-MM-DD]** Description of the lesson
@@ -67,7 +83,7 @@ Lessons in capture mode come from:
 
 Triggered by `/lessons scan` (no `--deep` flag).
 
-Input source: `.claude/memory/sessions/*.md` — markdown summaries written by `/bye`.
+Input source: `<scope>/sessions/*.md` — markdown summaries written by `/bye`. (Working state lives at scope root, not under `.claude/memory/`.)
 
 ### Steps
 
@@ -91,7 +107,7 @@ Input source: `.claude/memory/sessions/*.md` — markdown summaries written by `
    - **evidence:** <session-file refs, e.g. `session-2026-04-19_144813.md:L42`>
    ```
 
-5. **Write proposal file** to `.claude/contributions/lessons-scan-<YYYY-MM-DD>-default.md`:
+5. **Write proposal file** to `<workspace>/contributions/lessons-scan-<YYYY-MM-DD>-default.md` (mtime-check on write):
    ```markdown
    # Lessons scan — default mode — <YYYY-MM-DD>
 
@@ -112,7 +128,7 @@ Input source: `.claude/memory/sessions/*.md` — markdown summaries written by `
    ```
    Scan mode: default
    Window: <N> files
-   Proposals written: <count> → .claude/contributions/lessons-scan-<date>-default.md
+   Proposals written: <count> → <workspace>/contributions/lessons-scan-<date>-default.md
    Skills-manager: triggered
    ```
 
@@ -126,7 +142,7 @@ Input source: `~/.claude/projects/<your-project>/*.jsonl` — raw harness transc
 
 ### Steps
 
-1. **Select window**: list JSONL files modified in the last 3 days. Cap at 15 files. Note the count — if >20, use Opus model for this scan.
+1. **Select window**: list JSONL files modified in the last 3 days. Note the unbounded count first — if >20, use Opus model for this scan. Then cap at 15 files, preferring the most recent.
 
 2. **Scan each JSONL**. Each line is a JSON object representing one turn (user message, assistant response, tool call, tool result). Look for signals the markdown summary could have missed:
    - Mid-turn user frustration ("why are you...", "stop", multiple "no" in a row)
@@ -144,7 +160,7 @@ Input source: `~/.claude/projects/<your-project>/*.jsonl` — raw harness transc
    - **evidence:** `010cbd9d-adb5-4730-8121-64c158238a39.jsonl:L1247`
    ```
 
-5. **Write proposal file** to `.claude/contributions/lessons-scan-<YYYY-MM-DD>-deep.md` (same structure as default-mode proposal, with `Mode: deep` in the header).
+5. **Write proposal file** to `<workspace>/contributions/lessons-scan-<YYYY-MM-DD>-deep.md` (mtime-check on write; same structure as default-mode proposal, with `Mode: deep` and `Scope attribution: <workspace | projects/<slug> from marker>` in the header).
 
 6. **Hand off to skills-manager** — same as default scan.
 
@@ -152,11 +168,22 @@ Input source: `~/.claude/projects/<your-project>/*.jsonl` — raw harness transc
    ```
    Scan mode: deep
    Window: <N> JSONL files (<total line count>)
-   Proposals written: <count> → .claude/contributions/lessons-scan-<date>-deep.md
+   Proposals written: <count> → <workspace>/contributions/lessons-scan-<date>-deep.md
    Skills-manager: triggered
    ```
 
 ---
+
+## mtime-check protocol
+
+For every shared-file write (Mode A append; Mode B/C proposal write):
+
+1. Read the file; capture mtime.
+2. Compute the edit.
+3. Re-stat. If mtime changed since the read, re-read and re-apply the targeted change. Retry up to 3 times.
+4. Write.
+
+On retry exhaustion (>3 conflicts), prompt the user.
 
 ## Division of labor
 

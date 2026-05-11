@@ -8,18 +8,11 @@ user_invocable: true
 
 You are starting a new working session. Resolve the active context, load memory, and orient the user.
 
-## Behavioural contract
-
-- **Workspace is self-located from this skill's base directory.** The harness provides the skill base dir at load time (`.../.claude/skills/hello/`); the workspace is three levels up. Never trust cwd to be the workspace.
-- **cwd is a session-start hint only.** After /hello finishes, every other skill reads the active project (and workstream + open item) from the session marker, never from cwd. This is a universal rule in `agent-guardrails.md`.
-- **No menu pickers.** /hello asks open-ended questions; the model semantically maps the user's free-text answer against the registry and workstreams, asking only on miss or ambiguity.
-- **Workspace memory always loads.** Project memory layers on top when a project is selected — never replaces.
-
 ## Steps
 
 ### 1. Self-locate the workspace
 
-The skill's base directory is `<workspace>/.claude/skills/hello/`. Resolve `<workspace>` by walking up three directory levels. Validate that the resolved path contains `.claude/skills/setup-workspace/` (workspace marker). If validation fails, abort with a setup-broken error — this is not recoverable from inside /hello.
+The skill's base directory is `<workspace>/.claude/skills/hello/`. Resolve `<workspace>` by walking up three directory levels. Validate that `<workspace>/.claude/.workspace` exists. If validation fails, abort with a setup-broken error — this is not recoverable from inside /hello.
 
 ### 2. Classify cwd
 
@@ -49,7 +42,7 @@ List markers from:
 - `<workspace>/sessions/active/*.md` (workspace-level sessions)
 - `<workspace>/projects/*/sessions/active/*.md` (project-level sessions)
 
-For each, parse frontmatter (`project_slug`, `workstream_slug`, `open_item_slug`, `started_at`) and compute age. Held for the overlap check at step 12.
+For each, parse frontmatter (`project_slug`, `workstream_slug`, `open_item_slug`, `started_at`) and compute age. Held for the overlap check at step 13.
 
 ### 5. Run /mcp-doctor
 
@@ -210,19 +203,3 @@ Marker: <relative path>
 
 Open items are listed grouped by workstream — never flat, never all attributed to the active workstream. Cross-reference each `workstreams/*.md` file in the active scope to build the list. If a sibling session was flagged in step 13, note it under the active item.
 
-## What /hello does NOT do
-
-- Does NOT run /mcp-doctor in deep mode (only session mode).
-- Does NOT scaffold the workspace or projects (that's `/setup-workspace init` and `/setup-workspace add-project`).
-- Does NOT write to `MEMORY.md`, `lessons-learned.md`, `project-context.md`, `workstreams/<slug>.md`, or `latest-session.md` (that's `/bye`).
-- Does NOT modify `identity.md` (that's `/bye`, organic build-up — no interrogation at session start).
-- Does NOT spawn agents or sub-agents — purely a context-loading + marker-writing skill.
-
-## Important rules
-
-- **cwd is a hint, not a source of truth.** After /hello, no skill (including /hello in any later turn) derives the active project from cwd. Universal rule in `agent-guardrails.md`.
-- **Workspace memory always loads.** Project memory layers on top when a project is selected — never replaces.
-- **No menu pickers.** Open-ended questions; semantic mapping against the registry and workstreams.
-- **The marker is the source of truth.** Written exactly once per session by /hello, removed by /bye. Every other skill reads it for active project + workstream + open item.
-- **Slug sanitisation is mandatory** for workstream and open-item slugs — never concatenate raw user input into a path.
-- **Conflict unit is the open item, not the workstream.** Two sessions on different open items of the same workstream are valid.

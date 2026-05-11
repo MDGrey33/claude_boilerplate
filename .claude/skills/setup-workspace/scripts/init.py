@@ -146,6 +146,18 @@ def create_dirs(created: list, skipped: list) -> None:
             created.append(f"dir .claude/{d}/")
 
 
+def write_workspace_marker(created: list, skipped: list) -> None:
+    """Create the workspace marker file. Other skills detect a workspace by its presence."""
+    marker = workspace() / ".claude" / ".workspace"
+    if marker.exists():
+        skipped.append(".claude/.workspace (exists)")
+        return
+    if not is_dry_run():
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text("")
+    created.append(".claude/.workspace")
+
+
 def deploy_dir(src: Path, dst: Path, overwrite: bool, created: list, skipped: list, label: str) -> None:
     """Copy contents of src into dst. If overwrite, dst entries are replaced."""
     if not src.is_dir():
@@ -319,6 +331,7 @@ def main() -> None:
     skipped: list = []
 
     create_dirs(created, skipped)
+    write_workspace_marker(created, skipped)
     deploy_dir(source / ".claude/skills", _WORKSPACE / ".claude/skills", overwrite=True, created=created, skipped=skipped, label="skills")
     deploy_dir(source / ".claude/agents", _WORKSPACE / ".claude/agents", overwrite=True, created=created, skipped=skipped, label="agents")
     deploy_agent_guardrails(source, created, skipped)
