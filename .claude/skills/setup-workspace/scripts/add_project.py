@@ -29,6 +29,7 @@ from pathlib import Path
 SLUG_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 WORKSPACE_MARKER = ".claude/skills/setup-workspace"
 PROJECT_TEMPLATE_REL = ".claude/skills/setup-workspace/templates/project-CLAUDE.md.tmpl"
+STARTERS_DIR_REL = ".claude/skills/setup-workspace/templates/starters/project"
 REGISTRY_PATH_REL = ".claude/projects-index.json"
 REGISTRY_SCRIPT_REL = ".claude/skills/project-registry/scripts/registry.py"
 
@@ -45,29 +46,15 @@ GITIGNORE_PATTERNS = [
 ]
 GITIGNORE_HEADER = "# Per-engineer working state — never commit"
 
-MEMORY_STARTER = "# MEMORY\n\nDistilled patterns and decisions for this project.\n"
-LESSONS_STARTER = (
-    "# Lessons Learned\n\n"
-    "Raw lessons inbox. Promoted to MEMORY.md once stable; pruned when promoted.\n"
-)
-PROJECT_CONTEXT_STARTER = """# Project Context
-
-<!--
-Project-level domain context — what this project is, who uses it,
-constraints, and what "done" looks like.
-
-This file loads every session, so keep it short — essential context only.
-Detailed reference belongs in .claude/docs/architecture.md and
-.claude/docs/conventions.md.
-
-Good entries: business domain concepts, key constraints, who the users
-are, what "done" looks like for this project.
-
-Bad entries: file paths, code patterns, git history (Claude can read
-those directly).
--->
-"""
-SETTINGS_STARTER = "{}\n"
+# Starter files copied (only written if missing).
+# (source_filename_under_STARTERS_DIR_REL, destination_relpath_from_project)
+# Edit the files under templates/starters/project/ to change starter content.
+STARTER_MAP = [
+    ("MEMORY.md", ".claude/memory/MEMORY.md"),
+    ("lessons-learned.md", ".claude/memory/lessons-learned.md"),
+    ("project-context.md", ".claude/memory/project-context.md"),
+    ("settings.json", ".claude/settings.json"),
+]
 
 # Module-level state set by main()
 _WORKSPACE: Path | None = None
@@ -163,34 +150,21 @@ def write_starter(path: Path, content: str, label: str, created: list, skipped: 
 
 def deploy_starters(slug: str, created: list, skipped: list) -> None:
     pdir = project_dir(slug)
-    write_starter(
-        pdir / ".claude/memory/MEMORY.md",
-        MEMORY_STARTER,
-        f"projects/{slug}/.claude/memory/MEMORY.md",
-        created,
-        skipped,
-    )
-    write_starter(
-        pdir / ".claude/memory/lessons-learned.md",
-        LESSONS_STARTER,
-        f"projects/{slug}/.claude/memory/lessons-learned.md",
-        created,
-        skipped,
-    )
-    write_starter(
-        pdir / ".claude/memory/project-context.md",
-        PROJECT_CONTEXT_STARTER,
-        f"projects/{slug}/.claude/memory/project-context.md",
-        created,
-        skipped,
-    )
-    write_starter(
-        pdir / ".claude/settings.json",
-        SETTINGS_STARTER,
-        f"projects/{slug}/.claude/settings.json",
-        created,
-        skipped,
-    )
+    starters_dir = workspace() / STARTERS_DIR_REL
+    for src_name, dst_rel in STARTER_MAP:
+        src = starters_dir / src_name
+        if not src.is_file():
+            die(
+                f"starter missing at {src}\n"
+                f"hint: re-run /setup-workspace init to redeploy."
+            )
+        write_starter(
+            pdir / dst_rel,
+            src.read_text(),
+            f"projects/{slug}/{dst_rel}",
+            created,
+            skipped,
+        )
 
 
 def generate_claude_md(slug: str, description: str, created: list, skipped: list) -> None:

@@ -29,67 +29,28 @@ import sys
 from pathlib import Path
 
 WORKSPACE_TEMPLATE_REL = ".claude/skills/setup-workspace/templates/workspace-CLAUDE.md.tmpl"
+STARTERS_DIR_REL = ".claude/skills/setup-workspace/templates/starters/workspace"
 
 # Dirs to create at workspace root
 ROOT_DIRS = ["workstreams", "sessions/active", "artifacts", "me"]
 # Dirs to create under .claude/
 CLAUDE_DIRS = ["memory", "skills", "agents", "docs"]
 
-# Starter file content (only written if missing)
-MEMORY_STARTER = "# MEMORY\n\nDistilled patterns and decisions for this workspace.\n"
-LESSONS_STARTER = "# Lessons Learned\n\nRaw lessons inbox. Promoted to MEMORY.md once stable; pruned when promoted.\n"
-BRAG_STARTER = "# Brag Log\n\nAccomplishments worth remembering, append-only.\n"
-GROWTH_STARTER = "# Growth\n\nFocus areas, self-assessment notes, deliberate-practice goals.\n"
-IDENTITY_STARTER = """# Identity
-
-## Profile
-
-<!-- Fill in your profile. Skills auto-populate fields when MCPs are connected. -->
-
-- **Name**:
-- **Title**:
-- **Company**:
-- **Timezone**:
-- **GitHub username**:
-- **Atlassian email**:
-- **Slack user ID**:
-
-## Preferences
-
-<!-- How you want Claude to work with you -->
-
-## Writing Style
-
-<!-- Voice, tone, conventions you want preserved in drafts -->
-"""
-PROJECT_CONTEXT_STARTER = """# Workspace Context
-
-<!--
-Workspace-level domain context — overarching focus areas of this
-workspace, distinct from `me/identity.md` (which is "who I am") and
-from any individual project's project-context.md.
-
-This file loads every session, so keep it short — essential context only.
-
-Good entries: cross-cutting goals or initiatives, current organisational
-context, constraints that span projects.
-
-Bad entries: identity/role (use me/identity.md), per-project domain
-knowledge (use the project's project-context.md), file paths or code
-patterns (Claude can read those directly).
--->
-"""
-GITIGNORE_STARTER = """# Per-engineer working state — never commit
-projects/
-workstreams/
-sessions/
-collected/
-artifacts/
-contributions/
-
-# Macos
-.DS_Store
-"""
+# Starter files copied (only written if missing).
+# (source_filename_under_STARTERS_DIR_REL, destination_relpath_from_workspace)
+# Edit the files under templates/starters/workspace/ to change starter content;
+# the gitignore source has its leading dot stripped (filesystems get weird with
+# dotfile-only directories) and is materialised as `.gitignore` at the workspace.
+STARTER_MAP = [
+    ("MEMORY.md", ".claude/memory/MEMORY.md"),
+    ("lessons-learned.md", ".claude/memory/lessons-learned.md"),
+    ("project-context.md", ".claude/memory/project-context.md"),
+    ("identity.md", "me/identity.md"),
+    ("brag-log.md", "me/brag-log.md"),
+    ("growth.md", "me/growth.md"),
+    ("team.md", "me/team.md"),
+    ("gitignore", ".gitignore"),
+]
 
 # Module-level state set by main()
 _WORKSPACE: Path | None = None
@@ -285,15 +246,14 @@ def write_starter(path: Path, content: str, label: str, created: list, skipped: 
     created.append(label)
 
 
-def deploy_starters(created: list, skipped: list) -> None:
+def deploy_starters(source: Path, created: list, skipped: list) -> None:
     ws = workspace()
-    write_starter(ws / ".claude/memory/MEMORY.md", MEMORY_STARTER, ".claude/memory/MEMORY.md", created, skipped)
-    write_starter(ws / ".claude/memory/lessons-learned.md", LESSONS_STARTER, ".claude/memory/lessons-learned.md", created, skipped)
-    write_starter(ws / ".claude/memory/project-context.md", PROJECT_CONTEXT_STARTER, ".claude/memory/project-context.md", created, skipped)
-    write_starter(ws / "me/identity.md", IDENTITY_STARTER, "me/identity.md", created, skipped)
-    write_starter(ws / "me/brag-log.md", BRAG_STARTER, "me/brag-log.md", created, skipped)
-    write_starter(ws / "me/growth.md", GROWTH_STARTER, "me/growth.md", created, skipped)
-    write_starter(ws / ".gitignore", GITIGNORE_STARTER, ".gitignore", created, skipped)
+    starters_dir = source / STARTERS_DIR_REL
+    for src_name, dst_rel in STARTER_MAP:
+        src = starters_dir / src_name
+        if not src.is_file():
+            die(f"starter missing at {src}\nhint: re-clone the boilerplate source.")
+        write_starter(ws / dst_rel, src.read_text(), dst_rel, created, skipped)
 
 
 def print_summary(source: Path, created: list, skipped: list) -> None:
@@ -322,8 +282,8 @@ def print_summary(source: Path, created: list, skipped: list) -> None:
     else:
         print("Next steps:")
         print(f"  - cd {workspace()} and start a new Claude session.")
-        print("  - Customise CLAUDE.md and me/identity.md (placeholder values).")
-        print("  - Register projects: /setup-workspace add-project <slug>")
+        print("  - Fill in me/identity.md (placeholder values) and the Conventions block in CLAUDE.md.")
+        print("  - Run /hello — it picks up registered projects, or offers to register new ones as you describe them.")
         print("  - Optional: /setup-cognee for semantic search across memory.")
 
 
@@ -365,7 +325,7 @@ def main() -> None:
     deploy_other_docs(source, created, skipped)
     deploy_settings(source, created, skipped)
     generate_claude_md(source, created, skipped)
-    deploy_starters(created, skipped)
+    deploy_starters(source, created, skipped)
     print_summary(source, created, skipped)
 
 

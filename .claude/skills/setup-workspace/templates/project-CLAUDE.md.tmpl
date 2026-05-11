@@ -21,6 +21,17 @@ the workspace is ready.
 
 Per-engineer state at the project root (`workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/`) is gitignored.
 
+### Artifacts naming
+
+Any output produced by a skill or session — feedback files, generated documents, collected data, derived artefacts — lands under this project's `artifacts/` directory, never co-located with `workstreams/` or `sessions/`.
+
+| Output type | Path pattern |
+|-------------|--------------|
+| Skill output | `artifacts/<skill-slug>/<filename>` |
+| Workstream artefact | `artifacts/<workstream-slug>/<filename>` |
+
+Resolve scope from the session marker, never from cwd. Workspace-scoped artefacts live at the workspace root's `artifacts/`, not here.
+
 ## Conventions
 
 <!-- Fill in project-specific conventions -->
