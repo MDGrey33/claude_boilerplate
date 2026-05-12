@@ -31,9 +31,10 @@ Read all in parallel; skip silently if a file is missing:
 - `<workspace>/.claude/memory/MEMORY.md`
 - `<workspace>/.claude/memory/lessons-learned.md`
 - `<workspace>/.claude/memory/project-context.md`
-- `<workspace>/sessions/latest-session.md`
 
 Read the project registry directly from `<workspace>/.claude/projects-index.json` (registry mutations go via `/project-registry`; reads bypass it). Treat missing as empty.
+
+Session narrative for the active workstream loads after workstream resolution at step 11 — not here.
 
 ### 4. Scan active session markers
 
@@ -99,11 +100,12 @@ Read in parallel; skip silently if missing:
 - `<workspace>/projects/<slug>/.claude/memory/MEMORY.md`
 - `<workspace>/projects/<slug>/.claude/memory/lessons-learned.md`
 - `<workspace>/projects/<slug>/.claude/memory/project-context.md`
-- `<workspace>/projects/<slug>/sessions/latest-session.md`
 
 List `<workspace>/projects/<slug>/workstreams/*.md` (read on demand at step 11).
 
 For workspace-level scope, the equivalents at `<workspace>/.claude/memory/` are already loaded in step 3; just list `<workspace>/workstreams/*.md`.
+
+Session narrative for the active workstream loads after workstream resolution at step 11.
 
 ### 10. Cognee semantic search (conditional no-op)
 
@@ -111,16 +113,20 @@ If cognee is loaded (per /mcp-doctor's report), call `cognee_search "project con
 
 ### 11. Resolve workstream
 
-Phrasing branches on the active scope's `latest-session.md`:
+To seed the hint: list `<scope>/sessions/*.md`, sort descending by filename, take the most recent. Extract the workstream slug from the filename (`<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md` — the slug is the middle segment between the date and the timestamp). If no session files exist, skip the hint.
 
-- **Names an active workstream** → "Last time you were on `<workstream>`. Continue, or working on something else?"
-- **Otherwise** → "Which workstream are you on, or is this a new one?"
+Phrasing branches on whether a recent session file was found:
+
+- **Found** → "Last time you were on `<workstream-slug>`. Continue, or working on something else?"
+- **Not found** → "Which workstream are you on, or is this a new one?"
 
 Resolution:
 
 - **Continue** → load the named workstream file from the active scope's `workstreams/`.
 - **Match an existing workstream** (semantic, not regex) → confirm and load.
 - **New** → derive a slug from the user's description (sanitisation below); offer for confirmation; create `<scope>/workstreams/<slug>.md` with a one-line header (`# Workstream: <slug>` plus start date). No open-items section pre-populated — that's content `/bye` accumulates.
+
+**After workstream is confirmed**: find the most recent `<scope>/sessions/*-<workstream-slug>-*.md` and load it as the session narrative. Skip silently if none exists.
 
 **Slug sanitisation** (workstream and open-item slugs):
 
@@ -144,8 +150,6 @@ Either:
 
 Ask explicitly: "Which open item are you tackling? (Or is this a new one not yet on the list?)" Do NOT add new items to the workstream file — `/bye` writes that on session close.
 
-**Ad-hoc workspace work.** If the user explicitly skips workstream/open-item resolution (purely exploratory session, no binding intended), set `workstream_slug: ad-hoc` and `open_item_slug: ad-hoc`. The marker still writes; `/bye` treats these as transient and removes the marker without writing to a workstream file.
-
 ### 13. Overlap check
 
 Against the active markers from step 4:
@@ -154,8 +158,6 @@ Against the active markers from step 4:
 - **Same workstream, different open item** → not a conflict. Note in the final recap that another session is on a sibling item.
 - **Different workstream / different project / one is workspace-level and the other isn't** → not a conflict.
 
-Skip the overlap check entirely when `open_item_slug = ad-hoc`.
-
 ### 14. Write the session marker
 
 Path:
@@ -163,7 +165,7 @@ Path:
 - Project context → `<workspace>/projects/<slug>/sessions/active/<id>.md`.
 - Workspace-level → `<workspace>/sessions/active/<id>.md`.
 
-`<id>` format: `YYYY-MM-DD-HHMMSS-<6 hex>` (human-readable for grep, collision-safe at second resolution).
+Filename format: `<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md` — workstream slug embedded so the file can be promoted to `sessions/` by `/bye` with a directory move only (no rename). The date + HHMMSS + 6hex together are collision-safe at second resolution.
 
 Marker content:
 
@@ -177,7 +179,7 @@ started_at: <ISO-8601 with TZ offset>
 session_id: <id>
 ---
 
-Active session marker. Removed by /bye on session close.
+Active session marker. Promoted to sessions/ by /bye on session close.
 ```
 
 Atomic write. No mtime-check — the id is unique by construction, no race.

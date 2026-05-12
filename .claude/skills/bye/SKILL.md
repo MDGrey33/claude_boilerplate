@@ -16,7 +16,6 @@ You are wrapping up the current working session. Summarize, persist, and hand of
    - >1 matches → ask the user which session this `/bye` is closing. No soft default, no inference. Show each candidate's project + workstream + open item + age.
    - 0 matches → ask the user which scope to write to (workspace, or which project from the registry). Proceed without a marker to remove at step 13.
 
-   If the selected marker has `workstream_slug: ad-hoc` and `open_item_slug: ad-hoc`, skip step 4 (transient session, no workstream file to edit). The marker is still removed at step 13.
 
 2. **Summarize the session**: Review the conversation and identify:
    - What was accomplished (tasks completed, files changed)
@@ -25,14 +24,14 @@ You are wrapping up the current working session. Summarize, persist, and hand of
    - Problems encountered and how they were resolved
    - The open item bound to this session — is it complete? Ask the user if unclear; do not mark complete silently.
 
-3. **Write session summary**: Overwrite `<scope>/sessions/latest-session.md` using the mtime-check protocol (see footer). On mtime conflict on this file specifically, prompt the user: overwrite, append, or skip.
+3. **Write session narrative into the active marker**: Read the marker file at `<scope>/sessions/active/<filename>` (frontmatter already there from `/hello`). Append the session narrative body below the frontmatter closing `---`. No mtime-check — this is the session's own unique file; no other process writes to it.
 
    ```markdown
-   # Last Session
+   # Session
 
    **Date**: YYYY-MM-DD
    **Duration**: ~Xh (estimate based on conversation length)
-   **Workstream**: [name of active workstream file, e.g., boilerplate-redesign.md]
+   **Workstream**: <workstream_slug>
 
    ## Accomplished
    - [list of completed items]
@@ -84,20 +83,20 @@ You are wrapping up the current working session. Summarize, persist, and hand of
    Tasks completed: [count]
    Lessons captured: [count]
    Open items: [count]
-   Workstream: [name] — updated / skipped (ad-hoc) / none
+   Workstream: [name] — updated / none
    Memory: updated / unchanged
    Personal: brag-log updated / identity updated / unchanged
    Cognee: synced / skipped
-   Marker: [path] — removed / kept (session paused)
+   Marker: [path] — promoted to sessions/ / kept (session paused)
 
    See you next time! Run /hello to pick up where we left off.
    ```
 
-13. **Close the session marker**: Remove `<scope>/sessions/active/<session_id>.md`. Skip removal in two cases: (a) no marker was selected at step 1 (0-match case — nothing to remove); (b) the user signaled mid-`/bye` that the session isn't actually closing (reflect "kept (session paused)" in the farewell). The marker close is the last action — if any earlier step fails, the marker stays.
+13. **Promote the session marker**: Move `<scope>/sessions/active/<filename>` → `<scope>/sessions/<filename>` (directory move only — filename unchanged). Then prune: keep the last 10 files matching `*-<workstream-slug>-*.md` in `<scope>/sessions/` (sorted by filename descending), delete older ones. Skip in two cases: (a) no marker was selected at step 1 (0-match case — write the narrative to a fresh file at `<scope>/sessions/<YYYY-MM-DD>-<workstream-slug>-<6hex>.md` instead, then prune); (b) the user signaled mid-`/bye` that the session isn't actually closing — leave the marker in `active/` untouched (reflect "kept (session paused)" in the farewell). Promotion is the last action — if any earlier step fails, the marker stays in `active/`.
 
 ## mtime-check protocol
 
-For every shared-file write at steps 3, 4, 7, 8:
+For every shared-file write at steps 4, 7, 8 (not step 3 — the session file is the session's own unique file; no mtime-check needed):
 
 1. Read the file; capture mtime.
 2. Compute the edit.
