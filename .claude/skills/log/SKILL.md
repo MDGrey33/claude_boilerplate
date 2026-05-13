@@ -7,9 +7,11 @@ args: "run_id=<id> skill=<name> status=<SUCCESS|FAILED|WARNING> detail=<message>
 
 # Agent Log
 
-Append a structured log entry to `.claude/memory/agent-log.md`. This skill owns the log format, creation, and rotation. All other skills and agents call this instead of writing to the log directly.
+Append a structured log entry to `<workspace>/.claude/memory/agent-log.md`. This skill owns the log format, creation, and rotation. All other skills and agents call this instead of writing to the log directly.
 
 ## Steps
+
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/log/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below. Abort with a setup-broken error if validation fails.
 
 1. **Parse input**: Extract the fields from the arguments:
    - `run_id` — Identifier linking related entries (e.g., `cos-2026-04-11-1`). Use `manual` if no run ID was provided.
@@ -17,7 +19,7 @@ Append a structured log entry to `.claude/memory/agent-log.md`. This skill owns 
    - `status` — `SUCCESS`, `WARNING`, or `FAILED`
    - `detail` — Brief description (item counts on success, error reason on failure)
 
-2. **Check if log file exists**: Read `.claude/memory/agent-log.md`.
+2. **Check if log file exists**: Read `<workspace>/.claude/memory/agent-log.md`.
    - If it doesn't exist, create it with this header:
 
    ```markdown
