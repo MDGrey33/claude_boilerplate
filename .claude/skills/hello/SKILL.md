@@ -63,6 +63,8 @@ Lessons:    <N> conventions, <M> patterns
 Identity:   loaded / placeholder
 ```
 
+**"Last session" sourcing.** Scan both `<workspace>/sessions/*.md` (workspace-level closed sessions) AND `<workspace>/projects/*/sessions/*.md` (project-level closed sessions). Sort by the date and time embedded in each filename — not raw lexicographic order, since the workstream slug between them makes that unreliable. Take the most recent; read its frontmatter for `project_slug` and `workstream_slug` to build the one-line summary. Output "No previous sessions" only when both globs return no files.
+
 ### 7. Resolve project (open-ended)
 
 Phrasing branches on the cwd hint. In every variant, be honest about inference and invite explicit override — never imply the model deterministically knows whether work "is a project":
