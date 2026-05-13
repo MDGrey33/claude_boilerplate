@@ -19,7 +19,10 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
 
 ## Orchestrator Steps
 
-1. **Role guard**: Read `~/.claude/me/identity.md` and check the user's title/role.
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/collect-team-activity/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below (identity, team, output). Abort with a setup-broken error if validation fails. Sub-agents (executors) inherit `<workspace>` from the orchestrator — they do not re-resolve.
+
+
+1. **Role guard**: Read `<workspace>/me/identity.md` and check the user's title/role.
    - If the role is clearly IC-equivalent (e.g., "Software Engineer", "Developer") with no reports, **stop**:
      ```
      This skill is for leadership roles with direct reports.
@@ -46,15 +49,15 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
      - If cached in `## Profile`, use it. Verify it's still authenticated via `gh auth status` (parse for `Logged in to github.com account <handle>`). If the cached handle isn't in `gh auth status`, **fail loud** (FAILED) with re-auth instructions: `gh auth login --hostname github.com`.
      - If not cached, parse `gh auth status` for `Logged in to github.com account <handle>` lines:
        - **One account** → resolve via `gh api user --jq .login`, write back to `## Profile`.
-       - **Multiple accounts** → **fail loud** (FAILED): *"Multiple `gh` accounts detected. Set `GitHub username` manually in `~/.claude/me/identity.md` `## Profile` before re-running. Agents cannot disambiguate which is the business account."*
+       - **Multiple accounts** → **fail loud** (FAILED): *"Multiple `gh` accounts detected. Set `GitHub username` manually in `<workspace>/me/identity.md` `## Profile` before re-running. Agents cannot disambiguate which is the business account."*
      - **Active-session pattern**: if the active `gh` session differs from the cached handle, the orchestrator runs `gh auth switch --user <cached-handle>` *before* fan-out and `gh auth switch --user <previously-active>` *after* aggregation (try-finally). Sub-agents inherit the session set by the orchestrator and run plain `gh search` commands without further switching.
 
    **Write-back rule**: when MCP resolves a field that is missing from `identity.md`'s `## Profile` section, append it there. **Fill missing only — never overwrite an existing value.** A stale MCP handle could otherwise clobber the user's curated identity. If a resolved value differs from what's already there, log a `WARNING`, skip the write, and surface the discrepancy at the end of the run. **Identity write-back is orchestrator-only**; sub-agents must not touch `identity.md`.
 
-4. **Load team roster**: Read `~/.claude/me/team.md`.
+4. **Load team roster**: Read `<workspace>/me/team.md`.
    - If missing, **stop** with guidance:
      ```
-     No team roster found at ~/.claude/me/team.md
+     No team roster found at <workspace>/me/team.md
      Create one with your direct reports and their platform IDs.
      See the template at the bottom of this skill for the expected format.
      ```
@@ -99,7 +102,7 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
    - Member timezone:    {iana_tz}
    - Jira cloud ID:      {jira_cloud_id}
    - Date (local):       {YYYY-MM-DD}
-   - Output file path:   .claude/memory/activity/collect-team-activity/{member_slug}/{YYYY-MM-DD}-{member_slug}-activity.md
+   - Output file path:   <workspace>/collected/collect-team-activity/{member_slug}/{YYYY-MM-DD}-{member_slug}-activity.md
    - Run ID:             {run_id}
 
    Read .claude/skills/collect-team-activity/SKILL.md and follow the
@@ -286,7 +289,7 @@ Team activity collected: {Member Name} (YYYY-MM-DD)
 Items found: {count}
 Sources: Slack ({count}), Jira ({count}), Confluence ({count}), GitHub ({count or N/A})
 Gaps: {list any inaccessible sources}
-File: .claude/memory/activity/collect-team-activity/{member-slug}/YYYY-MM-DD-{member-slug}-activity.md
+File: <workspace>/collected/collect-team-activity/{member-slug}/YYYY-MM-DD-{member-slug}-activity.md
 ```
 
 **Multi-pair**:
@@ -296,7 +299,7 @@ Team activity collected: {first-date} to {last-date}
 Members × days: {n}/{total} succeeded ({n_partial} partial, {n_failed} failed)
 Total items: {sum across all SUCCESS/PARTIAL files}
 Failed pairs: {list or "none"}
-Files: .claude/memory/activity/collect-team-activity/<member-slug>/...
+Files: <workspace>/collected/collect-team-activity/<member-slug>/...
 ```
 
 ## Logging
@@ -324,7 +327,7 @@ Each executor sub-agent emits its own per-pair log entry (E4 above). Use `manual
 
 ## team.md Expected Format
 
-The skill expects `~/.claude/me/team.md` to follow this structure:
+The skill expects `<workspace>/me/team.md` to follow this structure:
 
 ```markdown
 # My Team

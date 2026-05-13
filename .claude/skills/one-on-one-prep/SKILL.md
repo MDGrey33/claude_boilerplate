@@ -11,17 +11,19 @@ Synthesize a team member's recent activity from daily activity files into a stru
 
 ## Steps
 
-1. **Role guard**: Read `~/.claude/me/identity.md` and check the user's title/role.
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/one-on-one-prep/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below (identity, team, activity input, output). Abort with a setup-broken error if validation fails.
+
+1. **Role guard**: Read `<workspace>/me/identity.md` and check the user's title/role.
    - If the role is clearly IC-equivalent with no reports, **stop**:
      ```
      This skill is for leadership roles with direct reports.
      ```
    - If ambiguous, proceed.
 
-2. **Load team roster**: Read `~/.claude/me/team.md`.
+2. **Load team roster**: Read `<workspace>/me/team.md`.
    - If missing, **stop** with guidance:
      ```
-     No team roster found at ~/.claude/me/team.md
+     No team roster found at <workspace>/me/team.md
      Create one with your direct reports and their platform IDs.
      ```
    - Match the member name loosely (first name, full name, case-insensitive). If no match, list available names and ask.
@@ -31,7 +33,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
      - **If missing and interactive (user is at the keyboard)** → prompt: `"No level set for {Member Name} in team.md. What level are they? (e.g., L4)"`. After user responds, write the level back to team.md (fill-missing-only — never overwrite an existing value). Continue.
      - **If missing and non-interactive (agent-driven)** → invoke `/log` with `status=WARNING detail=Level missing for {member-slug} in team.md — synthesis ran without level calibration`. Continue without the level-context block.
 
-3. **Load writing style**: Read the Writing Style section from `~/.claude/me/identity.md`. Apply it to all output. If no style is defined, default to clear and concise.
+3. **Load writing style**: Read the Writing Style section from `<workspace>/me/identity.md`. Apply it to all output. If no style is defined, default to clear and concise.
 
 4. **Load level expectations**: Read `.claude/docs/level-expectations.md` (project-scoped, shared reference).
    - Extract the row matching the member's level from each section: Identity Anchor, Rating Signal, Impact, Scope, Direction, Problem Landscape, Execution & Craft, Collaboration & Communication, Growth & Citizenship, and (for managers) People Leadership.
@@ -46,7 +48,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
    - The output is a list of every date in the range — **do not pre-filter to workdays**. If a member worked on a weekend, the activity file exists at that date, and pre-filtering would miss it.
 
 6. **Read activity files**: For each date in the range, look for:
-   - `.claude/memory/activity/collect-team-activity/<member-slug>/YYYY-MM-DD-<member-slug>-activity.md`
+   - `<workspace>/collected/collect-team-activity/<member-slug>/YYYY-MM-DD-<member-slug>-activity.md`
 
    For each file found: parse the Markdown to extract the `Status:` header, the `## Summary` text, and each `## Activity` item with its category, time, sources, and context.
 
@@ -100,7 +102,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
    - Keep each bullet to 1-2 sentences max.
    - Writing tone follows `identity.md` — if not set, default to direct and clear.
 
-9. **Write the output file**: Write to `.claude/memory/reports/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md` where `<member-slug>` is the slug computed in step 2 and the dates are the start and end of the activity period. Create parent directories if missing.
+9. **Write the output file**: Write to `<workspace>/artifacts/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md` where `<member-slug>` is the slug computed in step 2 and the dates are the start and end of the activity period. Create parent directories if missing.
 
    **Re-run on the same (member, period)**: overwrite the file. Add a header line `**Re-synthesis**: previous run superseded YYYY-MM-DD HH:MM:SS` (UTC) below the title so the user can see this is not a fresh first run.
 
@@ -161,7 +163,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
     Coverage: {X}/{Y} dates with activity data
     Missing: {dates without data, or "none"}
     Level context: {loaded / not loaded — reason}
-    File: .claude/memory/reports/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md
+    File: <workspace>/artifacts/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md
     ```
 
 11. **Logging**: On completion, invoke the `/log` skill:
