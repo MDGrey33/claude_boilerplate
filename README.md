@@ -13,38 +13,33 @@ Persistent memory and session management for Claude Code, powered by [cognee](ht
 
 ## Quick Start
 
-1. **Clone** this repo (or merge into an existing project)
-2. **Run `/setup-cognee`** — detects your environment, installs dependencies, configures everything
-3. **Customize** — fill in `CLAUDE.md`, `.claude/docs/architecture.md`, `.claude/docs/conventions.md`
-4. **Start working** — `/hello` to begin, `/bye` to end
+```bash
+git clone https://github.com/MDGrey33/claude_boilerplate.git ~/src/claude_boilerplate
+mkdir -p ~/workspace
+cd ~/src/claude_boilerplate
+claude
+# in the session: /setup-workspace init --workspace ~/workspace
+# exit, then start all future sessions from ~/workspace
+```
 
-**Existing project?** Ask Claude Code: *"Install the cognee boilerplate from /path/to/claude_boilerplate into this project"* — it will merge files carefully, preserving your existing config.
+1. **Clone** to a path outside your workspace (sibling layout — see Skills Reference)
+2. **Init** — `/setup-workspace init --workspace <path>` deploys skills, generates `CLAUDE.md`, bootstraps identity
+3. **Add projects** — `/setup-workspace add-project <slug>` from the workspace root
+4. **Start working** — `/hello` to begin each session, `/bye` to end
+5. **Cognee (optional)** — `/setup-cognee` for semantic memory, after the workspace is verified end-to-end
 
 ## Requirements
 
 - [Claude Code](https://claude.ai/code) CLI
-- An LLM API key (OpenAI recommended; Anthropic and Ollama also supported)
 
-Everything else (Python, uv, Docker, PostgreSQL) is detected and installed by `/setup-cognee`.
+Cognee (optional): `/setup-cognee` detects your environment and installs Python, uv, Docker, and PostgreSQL as needed. Supports OpenAI, Anthropic, and Ollama as the LLM backend.
 
 ## Skills Reference
 
-> **v2 workspace setup (new, in progress):** the boilerplate is installed into a workspace folder of your choice via `/setup-workspace init`. The cloned source and the workspace must live at sibling paths (e.g., `~/src/claude_boilerplate/` and `~/workspace/`) — never one inside the other. After init, work happens in the workspace; the source clone stays around for `/setup-workspace sync`. `/setup-workspace add-project` scaffolds projects under the workspace and registers them. `/project-registry` manages the registry directly. All v2 changes are additive — pre-v2 single-project usage continues to work.
->
-> Quick start (v2):
-> ```
-> # one-time setup
-> git clone https://github.com/MDGrey33/claude_boilerplate.git ~/src/claude_boilerplate
-> mkdir -p ~/workspace
-> cd ~/src/claude_boilerplate
-> claude
-> # in the session: /setup-workspace init --workspace ~/workspace
-> # exit, then start fresh sessions from ~/workspace going forward
-> ```
 
 | Skill | Trigger | Purpose |
 |-------|---------|---------|
-| `/setup-workspace` | Manual | (v2) Workspace lifecycle: `init` (first-time setup, deploys skills/agents/docs, generates `CLAUDE.md`), `add-project <slug> [description]` (scaffolds a project under `<workspace>/projects/<slug>/`, registers it). Future action: `sync`. |
+| `/setup-workspace` | Manual | (v2) Workspace lifecycle: `init` (first-time setup, deploys skills/agents/docs, generates `CLAUDE.md`), `add-project <slug> [description]` (scaffolds a project under `<workspace>/projects/<slug>/`, registers it — includes `CLAUDE.md`, memory files, and `docs/architecture.md` + `docs/conventions.md`), `sync` (re-copies skills/agents from source clone, flags conflicts before overwrite). |
 | `/project-registry` | Auto (via `/setup-workspace`) or manual | (v2) Manage the workspace project registry — `add` / `remove` / `update` / `list`. Single mutation point; other skills read the index file directly. |
 | `/hello` | Manual | Start a new session — load context, check MCP health, recap last session |
 | `/bye` | Manual | End the session — summarize work, capture lessons, persist memory |
@@ -108,46 +103,52 @@ Project A                          Boilerplate Repo
 
 ## Memory Architecture
 
-Three scopes keep knowledge organized by ownership:
+Three scopes keep knowledge organised by ownership:
 
 | Scope | Location | Purpose |
 |-------|----------|---------|
-| Personal | `~/.claude/me/` | Identity, team roster, brag log, growth notes |
-| Project | `repo/.claude/memory/` | Lessons, distilled knowledge, workstreams, activity, reports |
-| Contributions | `repo/.claude/contributions/` | Generalized lessons staged for boilerplate |
+| Personal | `<workspace>/me/` | Identity, team roster, brag log, growth notes |
+| Project | `<project>/.claude/memory/` + project root | Process knowledge, domain context, working state |
+| Contributions | `<project>/contributions/` | Generalised lessons staged for boilerplate |
 
-### Personal workspace (`~/.claude/me/`)
+### Personal workspace (`<workspace>/me/`)
 
-Created on first `/hello`, built up organically by `/bye` across all repos. Not in any git repo — personal to the engineer.
+Bootstrapped by `/setup-workspace init`, built up organically by `/bye`. Not in any git repo — personal to the engineer. `<workspace>` is wherever the user installed the boilerplate (e.g., `~/workspace/`).
 
 ```
-~/.claude/me/
+<workspace>/me/
 ├── identity.md          # Role, domains, skills, timezone, platform IDs
 ├── team.md              # Direct reports and their platform IDs (leadership roles)
-├── brag-log.md          # Accomplishments across all repos (append-only)
+├── brag-log.md          # Accomplishments across all projects (append-only)
 └── growth.md            # Improvement areas, self-assessment notes
 ```
 
-### Project memory (`repo/.claude/memory/`)
+### Project layout
+
+Working state and skill outputs sit at the **project root** (gitignored). Committed knowledge lives under `.claude/`.
 
 ```
-.claude/memory/
-├── MEMORY.md              # Stable patterns, key decisions (loaded into system prompt)
-├── lessons-learned.md     # Categorized lessons (appended over time)
-├── project-context.md     # Domain knowledge (manually maintained)
-├── sessions/
-│   └── latest-session.md  # Last session summary (overwritten each /bye)
-├── workstreams/           # Per-topic working context (lazy-loaded from user intent)
-├── activity/              # Daily collection outputs (never auto-loaded)
-└── reports/               # Synthesis outputs — weekly rollups, 1:1 preps (never auto-loaded)
+<project root>/
+├── workstreams/           # Per-topic working context (gitignored)
+├── sessions/active/       # Active session markers (gitignored)
+├── sessions/              # Closed session narratives (gitignored)
+├── collected/             # Raw collection outputs from skills (gitignored)
+├── artifacts/             # Synthesised skill outputs (gitignored)
+└── contributions/         # Staged boilerplate contributions (gitignored)
 
-.claude/contributions/         # Generalized lessons staged for boilerplate (via /contribute)
+.claude/
+├── memory/
+│   ├── MEMORY.md              # Stable patterns, key decisions (always loaded)
+│   ├── lessons-learned.md     # Raw lessons inbox (always loaded)
+│   └── project-context.md     # Domain knowledge (always loaded)
+├── docs/
+│   ├── architecture.md        # Project architecture (on-demand)
+│   └── conventions.md         # Code style and patterns (on-demand)
+└── settings.json
 ```
 
 **Markdown** is the primary store — always available, fast, deterministic.
-**Cognee** is the enrichment layer — semantic search across all accumulated knowledge.
-
-Skills gracefully degrade if cognee MCP is unavailable.
+**Cognee** is the optional enrichment layer — semantic search across accumulated knowledge. Skills degrade gracefully if unavailable.
 
 ### Team & leadership features
 
@@ -177,7 +178,7 @@ See `auto-memory/README.md` for the full description.
 | `.claude/docs/architecture.md` | Your project's architecture and structure |
 | `.claude/docs/conventions.md` | Code style, patterns, and standards |
 | `.claude/memory/project-context.md` | Domain-specific knowledge |
-| `~/.claude/me/identity.md` | Your role, preferences, writing style (personal, not per-project) |
+| `<workspace>/me/identity.md` | Your role, preferences, writing style (personal, not per-project) |
 
 ### Adding a new skill
 

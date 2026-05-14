@@ -54,6 +54,8 @@ STARTER_MAP = [
     ("lessons-learned.md", ".claude/memory/lessons-learned.md"),
     ("project-context.md", ".claude/memory/project-context.md"),
     ("settings.json", ".claude/settings.json"),
+    ("architecture.md", ".claude/docs/architecture.md"),
+    ("conventions.md", ".claude/docs/conventions.md"),
 ]
 
 # Module-level state set by main()
