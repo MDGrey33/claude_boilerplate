@@ -13,7 +13,10 @@ You are wrapping up the current working session. Summarize, persist, and hand of
 1. **Resolve scope.** The skill's base directory is `<workspace>/.claude/skills/bye/`; resolve `<workspace>` by walking up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Then scan `<workspace>/sessions/active/*.md` and `<workspace>/projects/*/sessions/active/*.md`. For each marker, parse frontmatter: `project_slug`, `workstream_slug`, `open_item_slug`, `open_item_summary`, `started_at`, `session_id`.
 
    - One match → select it. Scope is `<workspace>` if `project_slug = workspace`, else `<workspace>/projects/<project_slug>`.
-   - >1 matches → ask the user which session this `/bye` is closing. No soft default, no inference. Show each candidate's project + workstream + open item + age.
+   - >1 matches → apply workstream-slug disambiguation before asking:
+     1. If the current workstream slug is known from conversation context (i.e., `/hello` ran this session), filter markers by that slug. If exactly one matches, select it silently.
+     2. If multiple markers share the same workstream slug, select the most recently created — use the timestamp embedded in the filename (`<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md`).
+     3. Only ask when the workstream slug is unknown, or when step 1 yields zero matches. Show each candidate's project + workstream + open item + age.
    - 0 matches → ask the user which scope to write to (workspace, or which project from the registry). Proceed without a marker to remove at step 13.
 
 
