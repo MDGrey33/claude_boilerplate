@@ -43,7 +43,7 @@ List markers from:
 - `<workspace>/sessions/active/*.md` (workspace-level sessions)
 - `<workspace>/projects/*/sessions/active/*.md` (project-level sessions)
 
-For each, parse frontmatter (`project_slug`, `workstream_slug`, `open_item_slug`, `started_at`) and compute age. Held for the overlap check at step 13.
+For each, parse frontmatter (`project_slug`, `workstream_slug`, `open_item_slug`, `started_at`) and compute age. **Held purely for the recap at step 6** — informational only. No control-flow consumer in this skill; disambiguation work happens in step 12 against a workstream-local scan, not against this list.
 
 ### 5. Run /mcp-doctor
 
@@ -141,7 +141,30 @@ Resolution:
 - Always join the sanitised slug to `<scope>/workstreams/` (never concatenate raw user input into a path).
 - Fail with a validation prompt if the input cannot be safely normalised.
 
-### 12. Resolve open item (conflict unit)
+### 12. Check for an existing active marker on this workstream
+
+Now that scope and workstream are known, scan `<scope>/sessions/active/*-<workstream-slug>-*.md` — workstream-local only. No cross-scope scan; step 6's recap already surfaced cross-scope sessions for the user's awareness, and acting on those is the user's decision, not this skill's.
+
+Branches by count:
+
+- **0 matches** → proceed to step 13.
+- **1 match** → parse the marker's frontmatter. Show:
+
+   ```
+   Active marker on this workstream:
+     Open item: <open_item_summary>
+     Started:   <age> ago
+     File:      <relative path>
+
+   Resume that work, or start fresh?
+   ```
+
+   - **Resume** → adopt the marker as this session's marker. Load `open_item_slug` and `open_item_summary` from the frontmatter. Write `resumed_at: <ISO-8601 with TZ offset>` into the marker's frontmatter — add the field if missing, replace if present (only the most recent resume is tracked, no history list). Use mtime-check on this write since a concurrent `/hello` on the same marker could in principle race. **Skip step 13 (open-item resolution) and step 14 (marker write).** Record the resume decision for the final recap.
+   - **Fresh** → proceed to step 13. The prior marker stays in `active/` untouched — we do not auto-promote, auto-delete, or auto-modify. Flag it in step 15's recap so the user can decide what to do with it.
+
+- **>1 matches** → list each candidate with age + open item summary. Ask the user to pick one to resume, or to start fresh. Apply the same downstream branches as the 1-match case. Any unrescued candidates are surfaced in step 15.
+
+### 13. Resolve open item (conflict unit)
 
 Read the workstream file. Find checkbox lines (`- [ ] ...`).
 
@@ -152,15 +175,9 @@ Either:
 
 Ask explicitly: "Which open item are you tackling? (Or is this a new one not yet on the list?)" Do NOT add new items to the workstream file — `/bye` writes that on session close.
 
-### 13. Overlap check
-
-Against the active markers from step 4:
-
-- **Same `project_slug` + same `workstream_slug` + same `open_item_slug`** → conflict. Show: "Another session (started `<age>` ago) is already on this open item. Stand down, or proceed?" The user owns the decision; no auto-resolve.
-- **Same workstream, different open item** → not a conflict. Note in the final recap that another session is on a sibling item.
-- **Different workstream / different project / one is workspace-level and the other isn't** → not a conflict.
-
 ### 14. Write the session marker
+
+**Skip this step if step 12 resolved to *Resume*** — the existing marker is the session's marker; no fresh write needed.
 
 Path:
 
@@ -186,6 +203,8 @@ Active session marker. Promoted to sessions/ by /bye on session close.
 
 Atomic write. No mtime-check — the id is unique by construction, no race.
 
+**Optional field — `resumed_at`**: step 12's Resume branch later adds this to an adopted marker. Absence means the marker was never resumed. `/bye` step 3 surfaces it in the session narrative when present.
+
 ### 15. Final recap
 
 ```
@@ -205,5 +224,7 @@ Open items in this scope:
 Marker: <relative path>
 ```
 
-Open items are listed grouped by workstream — never flat, never all attributed to the active workstream. Cross-reference each `workstreams/*.md` file in the active scope to build the list. If a sibling session was flagged in step 13, note it under the active item.
+Open items are listed grouped by workstream — never flat, never all attributed to the active workstream. Cross-reference each `workstreams/*.md` file in the active scope to build the list.
+
+If step 12 left an unrescued prior marker on this workstream (the user picked "Fresh" or didn't resume one of multiple candidates), surface it after the open-items list with its full path so the user can decide what to do with it. Do not act on it automatically.
 
