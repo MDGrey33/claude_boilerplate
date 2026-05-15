@@ -71,6 +71,17 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 - `/contribute` → `/sanitizer` (blocks staging on any finding)
 - `/pull-contributions` → `/sanitizer --check` (blocks pull on any finding)
 
+## Skills Governance
+
+Skills in `.claude/skills/` are **deployed copies** — maintained in the boilerplate source, not in service repos. Do not edit them here directly.
+
+To propose a skill improvement:
+1. Use `/contribute` to generalise the lesson and stage it in `contributions/`
+2. The boilerplate maintainer runs `/pull-contributions` to apply it
+3. Changes land via GitHub PR and maintainer review
+
+`/skills-manager` identifies improvement opportunities during sessions and guides you through step 1.
+
 ## Workflow
 
 1. **Setup** (once per machine): `/setup-workspace init --workspace <path>` from the cloned source dir
