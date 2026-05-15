@@ -244,6 +244,7 @@ Collect the user's work activity for a given day (or date range) from all availa
 - **Every item must have at least one source link.** No exceptions. If you can't link to it, flag it as unverified.
 - **Frame by impact, not action.** Not "commented on PLAT-301" but "Provided architectural direction on audit log strategy for Node.js upgrade (PLAT-301)".
 - **Don't fabricate activity.** If a day is quiet, say so — that's useful signal.
+- **Never infer technical system names from shared vocabulary.** Use the exact service or system name from the source. If a source names an endpoint or service explicitly (e.g., `zeebe-cluster-gateway-zeebe-0`), use that name — do not substitute a related system (e.g., "Kafka") because they share vocabulary ("broker", "partition", "leader"). If the system name genuinely cannot be read from the source, write "system unclear" rather than guessing.
 - **Ask about gaps.** Always ask about DMs, meetings, and offline conversations at the end — these are invisible to MCP tools but often the most impactful work.
 - **Respect date boundaries.** Only include activity that occurred within the requested date range. Don't pull in stale tickets just because they exist.
 - **Always write the output file** — even on failure. The Status field (SUCCESS/PARTIAL/FAILED) lets calling agents check the result programmatically.

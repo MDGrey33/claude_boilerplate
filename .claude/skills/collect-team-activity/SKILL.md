@@ -317,6 +317,7 @@ Each executor sub-agent emits its own per-pair log entry (E4 above). Use `manual
 - **Every item must have at least one source link.** No exceptions. If you can't link to it, flag it as unverified.
 - **Frame by impact, not action.** Not "merged PR #45" but "Shipped connection pooling fix that unblocked staging deployment (PR #45)".
 - **Don't fabricate activity.** Only report what you find in the data sources. If someone had a quiet day, say so — that's useful signal too.
+- **Never infer technical system names from shared vocabulary.** Use the exact service or system name from the source. If a source names an endpoint or service explicitly (e.g., `zeebe-cluster-gateway-zeebe-0`), use that name — do not substitute a related system (e.g., "Kafka") because they share vocabulary ("broker", "partition", "leader"). If the system name genuinely cannot be read from the source, write "system unclear" rather than guessing.
 - **Gap notes are factual, not speculative.** When a source returns zero results, record the fact (e.g., "GitHub: 0 results in window"). Do not speculate on the cause ("likely private repo", "alternate handle", "permissions issue") unless verified — speculation in gap notes misleads downstream readers.
 - **Public sources only.** No DMs, no private channels. This is intentional and aligns with the team's public-by-default communication culture.
 - **Respect date boundaries.** Only include activity within the requested date range.
