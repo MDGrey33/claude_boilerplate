@@ -75,7 +75,15 @@ You are wrapping up the current working session. Summarize, persist, and hand of
 
 7. **Capture lessons**: If any lessons were identified, invoke the `/lessons` skill with the identified lessons. Do not pass scope — `/lessons` reads the marker itself.
 
-8. **Curate MEMORY.md**: If any patterns were confirmed during this session (proven across multiple sessions, not just one-offs), update `<scope>/.claude/memory/MEMORY.md` with mtime-check. This is a curation step — edit to reflect current truth, don't just append. Remove stale entries. When promoting a lesson into MEMORY.md, also remove the source entry from `<scope>/.claude/memory/lessons-learned.md` — that file is an inbox, not an archive.
+8. **Curate MEMORY.md**: First, read the full lessons inbox at both levels (skip the workspace read if scope = workspace — same file):
+   - `<scope>/.claude/memory/lessons-learned.md`
+   - `<workspace>/.claude/memory/lessons-learned.md`
+
+   Identify promotion candidates — either criterion qualifies:
+   - Confirmed by this session's work (the lesson was validated or re-encountered in the current conversation)
+   - Recurring pattern across 2+ inbox entries (same insight appearing in different sessions — exercise judgment, not string-matching)
+
+   For each candidate: promote into the MEMORY.md at the same scope as the lesson's source inbox (`<scope>/.claude/memory/MEMORY.md` for scope-level lessons; `<workspace>/.claude/memory/MEMORY.md` for workspace-level). Apply standard curation: edit to reflect current truth, don't just append, remove stale entries. Then remove the promoted entry from its source `lessons-learned.md` — that file is an inbox, not an archive.
 
 9. **Update personal workspace** (`<workspace>/me/` — never per-project, regardless of marker scope):
    - **identity.md**: Fill missing fields by name across the whole file. Never modify Preferences, Writing Style, Growth, or organic content.
