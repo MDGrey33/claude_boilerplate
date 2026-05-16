@@ -116,7 +116,9 @@ Collect the user's work activity for a given day (or date range) from all availa
    - **Timezone caveat**: JQL date literals evaluate in the Jira user's profile timezone, not UTC. Confirm the Jira profile TZ matches the user's local TZ or expect drift.
    - Request minimal fields: `summary, status, issuetype, priority, updated, assignee, reporter`.
    - Capture: key, summary, status, **assignee**, **reporter**, what changed, issue URL.
-   - **Authorship vs ownership**: when the user is the *reporter* but not the *assignee* on a ticket, surface this in the activity item (e.g., "Filed; assigned to {assignee-name}"). Downstream synthesis skills need this distinction.
+   - **Reporter-only** (you filed it, not assigned): capture key, title, assignee, status only. Label as "Filed; assigned to {assignee-name}." Do not describe as your own delivery work.
+   - **Assignee** (you own it): full detail — what moved, what's next, blockers if any.
+   - **Both** (reporter and assignee): treat as assignee for detail.
 
    **GitHub:**
    - **Active-session flip-flop pattern**: env-var token-passing (`GH_TOKEN=$(...) gh ...`) is blocked by the sandbox's `$(...)` substitution guard. Instead, switch the active gh session to the cached business handle, run plain `gh` commands, then restore. Each step is a separate Bash call (allowlist-friendly).

@@ -178,14 +178,25 @@ Per-source query parameters:
 - Paginate using `cursor`.
 - DMs are not accessible via MCP and are out of scope.
 
-**Jira:** Two queries (no comment-specific query — `issueFunction in commented(...)` is not portable across Jira instances; assignee/reporter/creator paths cover the common cases).
+**Jira:** Two queries:
 1. **Updated**: `(assignee = "{jira_account_id}" OR reporter = "{jira_account_id}") AND updated >= "YYYY-MM-DD" AND updated < "next_day"`
 2. **Created**: `creator = "{jira_account_id}" AND created >= "YYYY-MM-DD" AND created < "next_day"`
 
-- **Date boundary**: `>= "YYYY-MM-DD" AND < "next_day"` (not `<=` — Jira treats `<= "04-10"` as "before start of 04-10").
+- **Date boundary**: `>= "YYYY-MM-DD" AND < "next_day"`.
 - Request minimal fields: `summary, status, issuetype, priority, updated, assignee, reporter`.
-- Capture: key, summary, status, **assignee**, **reporter**, what changed, issue URL.
-- **Authorship vs ownership**: when the team member is the *reporter* but not the *assignee*, surface this explicitly in the activity item (e.g., "Filed by {member-name}; assigned to {assignee-name}"). Downstream skills (`/one-on-one-prep`) need this distinction to reason correctly about whose tickets are stalled.
+
+**Classify each returned ticket before capturing:**
+
+- **Reporter-only** (member is reporter, not assignee): light capture only — key, title, assignee name, current status. No description or context block. Label as "Filed by {member}; assigned to {assignee-name}." These are planning/oversight signals, not delivery signals. Group separately in the output under "Filed (reporter-only)".
+
+- **Assignee** (member is assignee, with or without also being reporter): full detail. Then check for execution evidence:
+  1. Status is In Progress or Done → flag `execution: status-change`. Strong delivery signal.
+  2. Status unchanged but ticket was `updated` in the window → fetch this ticket via `getJiraIssue` and check whether the member's `{jira_account_id}` appears in any comment within the window. If yes → flag `execution: commented`. If no → flag `execution: none` (awareness/planning — ticket is in queue, not acted on).
+  - Cap extra `getJiraIssue` calls at 5 per executor. If more than 5 assignee tickets have status unchanged, prioritise the most recently updated ones.
+
+- **Both** (member is assignee and reporter): treat as assignee for detail and execution evidence.
+
+Output: group tickets as "Owned (assignee)" and "Filed (reporter-only)" so downstream synthesis can apply role-appropriate interpretation.
 
 **Confluence:**
 - Uses the same Atlassian MCP as Jira.
