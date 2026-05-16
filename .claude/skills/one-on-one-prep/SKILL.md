@@ -80,8 +80,11 @@ Synthesize a team member's recent activity from daily activity files into a stru
    **In Progress / Open Items**
    - Group by project or theme
    - Each item: current state, what's next (only as visible from the data), any blockers (only as flagged in the source items)
-   - Flag items that have been in progress across multiple days without visible movement
-   - **Distinguish authorship from ownership** — when surfacing a ticket, note whether the team member is the assignee or the reporter. "Assigned to {Name}, no movement since X" is a different observation from "Filed by {member}, assigned to {someone-else}".
+   - Use the `execution` flag from the `## Jira — Owned (assignee)` section to interpret assignee tickets:
+     - `execution: status-change` — include as delivery evidence; the member drove this
+     - `execution: commented` — lighter engagement signal; include if the comment shaped the outcome
+     - `execution: none` — **awareness/planning signal only.** Do NOT surface as stalled delivery or "no movement." For leadership roles, tickets are frequently assigned for routing, awareness, or sprint-queue purposes, not for the assignee to execute personally. State the ticket is in queue if relevant; do not imply the member should have acted.
+   - **Reporter-only tickets** (`## Jira — Filed (reporter-only)` or `## Filed (reporter-only)` sections in the activity file) must NOT appear in Completed or In Progress. Surface them in a separate **Sprint Portfolio** section after Discussion Candidates — a brief table (key, summary, assignee, status). These are planning/oversight signals: the member created the work and delegated it to an IC. Delivery credit belongs on the IC's report.
 
    **Patterns & Observations**
    - Surface non-obvious patterns the data supports: stalled tickets, recurring categories, time-of-day patterns, cross-team coordination, sustained focus areas.

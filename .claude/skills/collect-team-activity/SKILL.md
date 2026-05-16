@@ -170,7 +170,7 @@ Per-source query parameters:
 - **Jira / Confluence** — pass `{date}` and `{next_day}` as `YYYY-MM-DD` strings with the half-open `>=` / `<` boundary (see Jira section). **Caveat**: Jira and Confluence evaluate JQL/CQL date literals in the *user's profile timezone*, not UTC — if the member's Jira profile TZ differs from the executor's resolved TZ, results drift by hours.
 
 **Slack:**
-- Search `slack_search_public` for messages from the member using `{slack_id}`.
+- Search `slack_search_public_and_private` for messages from the member using `{slack_id}`. This surfaces all channels the caller has access to, including private leadership/engineering channels that are legitimately relevant to team activity collection.
 - Use `detailed` response format (never `concise` — it drops timestamps and permalinks). Set `include_context: false` to keep response size manageable; use `slack_read_thread` selectively for context.
 - Capture: channel, timestamp, message summary, permalink.
 - Note threads with decisions, guidance, approvals.
@@ -204,7 +204,7 @@ Output: group tickets as "Owned (assignee)" and "Filed (reporter-only)" so downs
 - The `contributor` field already covers comments — a comment is a Confluence contribution. No separate comment query needed.
 - For each result: capture space, title, type of contribution (created vs. updated, page vs. comment), URL.
 
-**GitHub:** The orchestrator has already set the active `gh` session to the cached business handle. Run plain `gh search` commands; do not switch sessions inside an executor sub-agent.
+**GitHub:** Before running any `gh search` command, verify the active session is the cached business handle: run `gh auth status` and confirm the cached handle shows `Active account: true`. If it differs, run `gh auth switch --user {github_handle}` first. The orchestrator normally handles this before fan-out, but executors spawned in isolation must self-check. After the initial check, run plain `gh search` commands without further switching.
 
 Use **full ISO timestamps with the member's TZ offset**, not bare `YYYY-MM-DD`. Bare dates are interpreted as UTC, so for non-UTC member TZs the window slips by the offset (e.g., for Asia/Dubai, `--created "2026-04-30..2026-04-30"` covers UTC 04-30 = local 04-30 04:00 → 05-01 04:00, missing 4 hours of local 04-30 and including 4 hours of local 05-01).
 
