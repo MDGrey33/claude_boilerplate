@@ -101,6 +101,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
 8. **Formatting rules**:
    - Add the specific date to each point — activity files always carry ISO `Time:` stamps. Use the **local-date portion** (the date in the timezone offset shown), not the UTC date. For an item at `2026-04-12T01:30:00+04:00`, the date is `2026-04-12`, not `2026-04-11`.
    - **Source link text: ticket key alone** (e.g., `[PLAT-808](url)`). Weave the title into the bullet text or context line where useful. Embedding full key+title in link text bloats bullets when titles are long.
+   - **Slack permalinks: use exactly as provided in the activity file.** Thread reply permalinks include `?thread_ts=<parent_ts>&cid=<channel_id>` — never reconstruct or shorten them. A bare `p<timestamp>` URL without `?thread_ts=` will not navigate to the reply in Slack.
    - Every claim must have a source link. No exceptions.
    - Keep each bullet to 1-2 sentences max.
    - Writing tone follows `identity.md` — if not set, default to direct and clear.

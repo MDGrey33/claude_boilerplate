@@ -171,11 +171,12 @@ Per-source query parameters:
 
 **Slack:**
 - Search `slack_search_public_and_private` for messages from the member using `{slack_id}`. This surfaces all channels the caller has access to, including private leadership/engineering channels that are legitimately relevant to team activity collection.
-- Use `detailed` response format (never `concise` — it drops timestamps and permalinks). Set `include_context: false` to keep response size manageable; use `slack_read_thread` selectively for context.
-- Capture: channel, timestamp, message summary, permalink.
+- Use `detailed` response format (never `concise` — it drops timestamps and permalinks). Set `include_context: false` to keep response size manageable.
+- Capture: channel, timestamp, message summary, **full permalink as returned by the MCP** (thread reply permalinks include `?thread_ts=<parent_ts>&cid=<channel_id>` — preserve this exactly; never reconstruct Slack URLs).
 - Note threads with decisions, guidance, approvals.
 - Fold low-signal items (reactions, acks) into the related activity they refer to.
 - Paginate using `cursor`.
+- **Selective thread reading**: after paginating all results, identify messages where `Reply count > 0` AND the message is question- or decision-shaped (contains "?", directly @-mentions someone with a request, or uses "can we / should we / please / could you"). For each such message (cap at 5 per day), call `slack_read_thread` and capture the last substantive non-bot reply as a `Thread outcome:` line on the activity item. This surfaces whether a request was actioned, a decision was made, or the question is still open — without reading all threads indiscriminately.
 - DMs are not accessible via MCP and are out of scope.
 
 **Jira:** Two queries:
