@@ -84,7 +84,7 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
 
    - **Single (member, date) pair**: skip the spawn. Run steps E1–E4 inline. Sub-agent overhead is not worth it for one pair.
 
-   - **Multi-pair**: spawn one Agent (sub-agent_type=`general-purpose`) per pair, in **sequential batches of 3–5 parallel sub-agents**. MCP servers (Atlassian, Slack, GitHub) rate-limit; running all pairs concurrently will trip secondary rate limits. The orchestrator emits 3–5 Agent tool calls in a single message (concurrent), waits for the batch to return, then emits the next batch.
+   - **Multi-pair**: spawn one Agent (sub-agent_type=`general-purpose`) per pair. **Batch by member, not by day.** The Slack MCP rate-limits per session — concurrent sub-agents querying different members' Slack simultaneously trip this limit and return 0 results. Safe pattern: run all dates for one member in parallel (different date windows, same user = no contention), then wait for that member to complete before starting the next member. Never include more than one member in the same parallel batch. Each member's dates emit as one Agent tool-call message (up to 5 dates in parallel), then wait before starting the next member.
 
    **Sub-agent prompt template** — fill in for each pair:
 
