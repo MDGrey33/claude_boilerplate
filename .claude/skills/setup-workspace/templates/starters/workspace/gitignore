@@ -1,0 +1,10 @@
+# Per-engineer working state — never commit
+projects/
+workstreams/
+sessions/
+collected/
+artifacts/
+contributions/
+
+# Macos
+.DS_Store

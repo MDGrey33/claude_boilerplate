@@ -1,0 +1,47 @@
+# {{project_name}}
+
+> {{description}}
+
+## First-time setup
+
+If you've landed in this repo without the boilerplate workspace set up,
+several skills (cross-repo memory, identity-aware reports, brag log
+accumulation) won't be available. The repo works standalone, but the full
+experience requires the boilerplate.
+
+To set up: clone the boilerplate source — for example, into
+`~/<workspace>/source/claude_boilerplate/` — and run `/setup-workspace init`
+from your chosen workspace folder. Register this project via `/hello` once
+the workspace is ready.
+
+## Memory
+
+- `.claude/memory/MEMORY.md` — distilled patterns and decisions (committed).
+- `.claude/memory/lessons-learned.md` — raw lessons inbox (committed).
+
+Per-engineer state at the project root (`workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/`) is gitignored.
+
+### Artifacts naming
+
+Any output produced by a skill or session — feedback files, generated documents, collected data, derived artefacts — lands under this project's `artifacts/` directory, never co-located with `workstreams/` or `sessions/`.
+
+| Output type | Path pattern |
+|-------------|--------------|
+| Skill output | `artifacts/<skill-slug>/<filename>` |
+| Workstream artefact | `artifacts/<workstream-slug>/<filename>` |
+
+Resolve scope from the session marker, never from cwd. Workspace-scoped artefacts live at the workspace root's `artifacts/`, not here.
+
+## Conventions
+
+<!-- Fill in project-specific conventions -->
+- Language:
+- Framework:
+- Test runner:
+- Formatting:
+
+## Detailed Docs
+
+Reference files for on-demand context (load with `@`):
+- `.claude/docs/architecture.md` — project architecture and structure
+- `.claude/docs/conventions.md` — code style and patterns

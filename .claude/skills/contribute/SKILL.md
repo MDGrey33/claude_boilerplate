@@ -17,9 +17,11 @@ See `~/.claude/skills/_shared/MODEL_SELECTION.md` for full policy.
 
 You are preparing a generalized contribution that can be pulled into the shared boilerplate repo. The contribution must be **project-agnostic** — no project names, file paths, domain terms, API keys, or internal details.
 
+**Setup — Resolve `<workspace>` and scope**: The skill's base directory is `<workspace>/.claude/skills/contribute/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Abort with a setup-broken error if validation fails. Then read the active session marker from `<workspace>/sessions/active/*.md` and `<workspace>/projects/*/sessions/active/*.md` to determine scope: if `project_slug` is `workspace`, scope is `<workspace>`; otherwise scope is `<workspace>/projects/<project_slug>`. If no marker exists, ask the user whether to read from workspace or a specific project before proceeding.
+
 ## Steps
 
-1. **Gather input**: If a lesson or improvement was passed as argument, use it. Otherwise, read `.claude/memory/lessons-learned.md` and ask the user which lessons they'd like to contribute back.
+1. **Gather input**: If a lesson or improvement was passed as argument, use it. Otherwise, read `<scope>/.claude/memory/lessons-learned.md` and ask the user which lessons they'd like to contribute back.
 
 2. **Classify the contribution** into one of these types:
    - `skill-update` — improvement to an existing skill's instructions
@@ -42,7 +44,7 @@ You are preparing a generalized contribution that can be pulled into the shared 
    ```
    If sanitizer returns any findings (SECRET, PII, PRIVATE_CONTEXT, or TONE), **do not proceed**. Surface the full report to the user and apply recommended fixes before continuing. The sanitizer is the dedicated scrubber — do not duplicate its logic here.
 
-5. **Write the contribution**: Create a new file in `.claude/contributions/` with this format:
+5. **Write the contribution**: Create a new file in `<workspace>/contributions/` with this format:
 
    **Filename**: `YYYY-MM-DD-<short-slug>.md` (e.g., `2025-06-15-improve-hello-mcp-retry.md`)
 
@@ -71,18 +73,18 @@ You are preparing a generalized contribution that can be pulled into the shared 
    - "Sanitizer pass — findings above. Any other adjustments needed?"
    - "Ready to save, or want to adjust?"
 
-7. **Save**: Write the file to `.claude/contributions/`.
+7. **Save**: Write the file to `<workspace>/contributions/`.
 
 8. **Report**:
    ```
    Contribution staged
    ===================
-   File: .claude/contributions/<filename>.md
+   File: <workspace>/contributions/<filename>.md
    Type: <type>
    Target: <target files>
 
    To integrate into boilerplate, run /pull-contributions from the boilerplate repo
-   and point it at this project's .claude/contributions/ folder.
+   and point it at <workspace>/contributions/.
    ```
 
 ## Important Rules

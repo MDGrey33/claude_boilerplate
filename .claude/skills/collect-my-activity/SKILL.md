@@ -7,9 +7,11 @@ args: "Optional date or date range (e.g., '2026-04-11', '2026-04-07 to 2026-04-1
 
 # Collect My Activity
 
-Collect the user's work activity for a given day (or date range) from all available data sources (Slack, Jira, Confluence, GitHub, Google Drive). Every item must include a source link. Output is written to `.claude/memory/activity/`.
+Collect the user's work activity for a given day (or date range) from all available data sources (Slack, Jira, Confluence, GitHub, Google Drive). Every item must include a source link. Output is written to `<workspace>/collected/`.
 
 ## Steps
+
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/collect-my-activity/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below (identity, output). Abort with a setup-broken error if validation fails — this is not recoverable from inside the skill.
 
 1. **Pre-flight checks**: Verify the environment before collecting:
    - **Slack MCP**: Check Slack tools are available. If missing, fail.
@@ -43,7 +45,7 @@ Collect the user's work activity for a given day (or date range) from all availa
      - If cached in `## Profile`, use it. Verify it's still authenticated via `gh auth status` (parse for `Logged in to github.com account <handle>`). If the cached handle isn't in `gh auth status`, **fail loud** (FAILED) with re-auth instructions: `gh auth login --hostname github.com`.
      - If not cached, parse `gh auth status` for `Logged in to github.com account <handle>` lines:
        - **One account** → resolve via `gh api user --jq .login`, write back to `## Profile`.
-       - **Multiple accounts** → **fail loud** (FAILED): *"Multiple `gh` accounts detected. Set `GitHub username` manually in `~/.claude/me/identity.md` `## Profile` before re-running. Agents cannot disambiguate which is the business account."*
+       - **Multiple accounts** → **fail loud** (FAILED): *"Multiple `gh` accounts detected. Set `GitHub username` manually in `<workspace>/me/identity.md` `## Profile` before re-running. Agents cannot disambiguate which is the business account."*
      - **Active-session flip-flop**: env-var token-passing (`GH_TOKEN=$(gh auth token --user X) gh ...`) does not work reliably in the Claude Code sandbox — `$(...)` substitution gets blocked at a layer below the allowlist. Instead, the skill uses `gh auth switch --user <handle>` to flip the active session before queries, runs plain `gh` commands, and switches back at the end. See step 4 GitHub section for the exact pattern.
 
    **Write-back rule**: when MCP resolves a field that is missing from `identity.md`'s `## Profile` section, append it there. **Fill missing only — never overwrite an existing value.** A stale MCP handle could otherwise clobber the user's curated identity. If a resolved value differs from what's already there, log a `WARNING`, skip the write, and surface the discrepancy at the end of the run.
@@ -114,7 +116,9 @@ Collect the user's work activity for a given day (or date range) from all availa
    - **Timezone caveat**: JQL date literals evaluate in the Jira user's profile timezone, not UTC. Confirm the Jira profile TZ matches the user's local TZ or expect drift.
    - Request minimal fields: `summary, status, issuetype, priority, updated, assignee, reporter`.
    - Capture: key, summary, status, **assignee**, **reporter**, what changed, issue URL.
-   - **Authorship vs ownership**: when the user is the *reporter* but not the *assignee* on a ticket, surface this in the activity item (e.g., "Filed; assigned to {assignee-name}"). Downstream synthesis skills need this distinction.
+   - **Reporter-only** (you filed it, not assigned): capture key, title, assignee, status only. Label as "Filed; assigned to {assignee-name}." Do not describe as your own delivery work.
+   - **Assignee** (you own it): full detail — what moved, what's next, blockers if any.
+   - **Both** (reporter and assignee): treat as assignee for detail.
 
    **GitHub:**
    - **Active-session flip-flop pattern**: env-var token-passing (`GH_TOKEN=$(...) gh ...`) is blocked by the sandbox's `$(...)` substitution guard. Instead, switch the active gh session to the cached business handle, run plain `gh` commands, then restore. Each step is a separate Bash call (allowlist-friendly).
@@ -191,9 +195,9 @@ Collect the user's work activity for a given day (or date range) from all availa
    - `ai-engineering` — AI tool adoption, AI-powered workflows, AI strategy
    - `growth` — Learning, conferences, training, certifications, knowledge sharing
 
-7. **Capture a timestamp per item**: For each activity item, record the **earliest underlying event's timestamp** as ISO 8601 with timezone offset (e.g., `2026-04-12T14:32:00+04:00`). Use the user's timezone from `~/.claude/me/identity.md`. When an item spans multiple events (e.g., Slack thread + Jira update + PR), use the earliest. This enables downstream synthesis of time-based patterns (late-hour work, reactive windows, deferral over time).
+7. **Capture a timestamp per item**: For each activity item, record the **earliest underlying event's timestamp** as ISO 8601 with timezone offset (e.g., `2026-04-12T14:32:00+04:00`). Use the user's timezone from `<workspace>/me/identity.md`. When an item spans multiple events (e.g., Slack thread + Jira update + PR), use the earliest. This enables downstream synthesis of time-based patterns (late-hour work, reactive windows, deferral over time).
 
-8. **Write the output file**: Write to `.claude/memory/activity/collect-my-activity/YYYY-MM-DD-activity.md` (using the user's local date). Create parent directories if missing.
+8. **Write the output file**: Write to `<workspace>/collected/collect-my-activity/YYYY-MM-DD-activity.md` (using the user's local date). Create parent directories if missing.
 
    **Re-run on the same date**: overwrite the file. Add a header line `**Re-collection**: previous run superseded YYYY-MM-DD HH:MM:SS` (UTC) below the title so the user can see this is a re-collection, not a fresh first run.
 
@@ -231,7 +235,7 @@ Collect the user's work activity for a given day (or date range) from all availa
    Items found: [count]
    Sources: Slack ([count]), Jira ([count]), Confluence ([count]), GitHub ([count or N/A]), Drive ([count or N/A])
    Gaps: [list any inaccessible sources]
-   File: .claude/memory/activity/collect-my-activity/YYYY-MM-DD-activity.md
+   File: <workspace>/collected/collect-my-activity/YYYY-MM-DD-activity.md
 
    Anything missing? Notable DMs, meetings, or whiteboard sessions to add?
    ```
@@ -242,6 +246,7 @@ Collect the user's work activity for a given day (or date range) from all availa
 - **Every item must have at least one source link.** No exceptions. If you can't link to it, flag it as unverified.
 - **Frame by impact, not action.** Not "commented on PLAT-301" but "Provided architectural direction on audit log strategy for Node.js upgrade (PLAT-301)".
 - **Don't fabricate activity.** If a day is quiet, say so — that's useful signal.
+- **Never infer technical system names from shared vocabulary.** Use the exact service or system name from the source. If a source names an endpoint or service explicitly (e.g., `zeebe-cluster-gateway-zeebe-0`), use that name — do not substitute a related system (e.g., "Kafka") because they share vocabulary ("broker", "partition", "leader"). If the system name genuinely cannot be read from the source, write "system unclear" rather than guessing.
 - **Ask about gaps.** Always ask about DMs, meetings, and offline conversations at the end — these are invisible to MCP tools but often the most impactful work.
 - **Respect date boundaries.** Only include activity that occurred within the requested date range. Don't pull in stale tickets just because they exist.
 - **Always write the output file** — even on failure. The Status field (SUCCESS/PARTIAL/FAILED) lets calling agents check the result programmatically.
@@ -257,7 +262,7 @@ On completion (success or failure), invoke the `/log` skill:
 
 The `run_id` is passed by the calling agent (e.g., Chief of Staff). Use `manual` if invoked directly by the user.
 
-## Expected `~/.claude/me/identity.md` format
+## Expected `<workspace>/me/identity.md` format
 
 The skill reads structured fields from a single `## Profile` section. Everything else in `identity.md` — Preferences, Writing Style, Growth areas, anything that surfaces during sessions — is human-curated and skills never touch it.
 

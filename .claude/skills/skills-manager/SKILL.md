@@ -11,7 +11,13 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
 
 ## Steps
 
-1. **Understand the trigger**: Review the lessons or requests passed as input. If invoked manually, ask the user what they'd like to do — add a new skill, update an existing one, remove one, or review for improvements.
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/skills-manager/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Abort with a setup-broken error if validation fails.
+
+1. **Understand the trigger and load lessons context**: Review the lessons or requests passed as input. Derive the active project slug from the session marker (scan `<workspace>/sessions/active/*.md` and `<workspace>/projects/*/sessions/active/*.md`; use `project_slug` from frontmatter — skip project-scope read if no marker exists or `project_slug` is `workspace`). Then read the following files (skip silently if missing):
+   - `<workspace>/projects/<slug>/.claude/memory/lessons-learned.md` (project scope, when a project marker is active)
+   - `<workspace>/.claude/memory/lessons-learned.md` (workspace scope)
+
+   Scan all entries for recurring mentions of the same skill, bug patterns, or convention violations that span multiple sessions. These inform step 2 even when not explicitly passed as args. If invoked manually with no args, use the lessons as the starting point for proposing improvements rather than asking the user what to do.
 
 2. **Assess what's needed**: Determine the appropriate action:
 
