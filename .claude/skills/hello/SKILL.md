@@ -175,6 +175,8 @@ Either:
 
 Ask explicitly: "Which open item are you tackling? (Or is this a new one not yet on the list?)" Do NOT add new items to the workstream file — `/bye` writes that on session close.
 
+**If the user defers answering** (redirects to loading context, asks a clarifying question, or gives a non-answer), hold steps 13 and 14 open. When the first concrete work signal arrives — any request to produce, modify, investigate, or write something — re-ask the open-item question and complete step 14 before starting that work. Never begin substantive work without a written marker.
+
 ### 14. Write the session marker
 
 **Skip this step if step 12 resolved to *Resume*** — the existing marker is the session's marker; no fresh write needed.

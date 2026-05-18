@@ -180,7 +180,7 @@ For every shared-file write (Mode A append; Mode B/C proposal write):
 
 1. Read the file; capture mtime.
 2. Compute the edit.
-3. Re-stat. If mtime changed since the read, re-read and re-apply the targeted change. Retry up to 3 times.
+3. Re-stat. If mtime changed since the read, re-read the file and re-compute the edit from scratch. Retry up to 3 times.
 4. Write.
 
 On retry exhaustion (>3 conflicts), prompt the user.

@@ -2,7 +2,7 @@
 name: pull-contributions
 description: Pull generalized contributions from a project into the boilerplate. Runs `sanitizer --check` as a mandatory gate before integration.
 user_invocable: true
-args: Path to a project's .claude/contributions/ folder
+args: Path to a workspace's contributions/ folder (e.g., <workspace>/contributions/)
 ---
 
 ## Model Selection

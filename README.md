@@ -50,7 +50,7 @@ Cognee (optional): `/setup-cognee` detects your environment and installs Python,
 | `/collect-team-activity` | Manual | Collect a team member's daily activity (leadership roles) |
 | `/one-on-one-prep` | Manual | Synthesize a member's activity into 1:1 meeting prep |
 | `/log` | Auto (via skills) | Append structured entry to agent log |
-| `/contribute` | Manual | Generalize a lesson and stage it in `.claude/contributions/` |
+| `/contribute` | Manual | Generalize a lesson and stage it in `<workspace>/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
 | `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine |
 | `/sanitizer` | Auto (via `/contribute`, `/pull-contributions`) or manual | Scrub files for secrets, PII, private context, tone risks before publish. `--check` mode for CI gates. |
@@ -63,7 +63,7 @@ Cognee (optional): `/setup-cognee` detects your environment and installs Python,
 
 ### Skill Chains
 
-```
+```text
 /hello ──> /mcp-doctor (session mode)
 /bye ──> /lessons ──> /skills-manager
 /setup-cognee ──> /mcp-doctor
@@ -81,7 +81,7 @@ Lessons learned in individual projects can flow back to improve the shared boile
 
 ### Flow
 
-```
+```text
 Project A                          Boilerplate Repo
 ─────────                          ────────────────
 /lessons "discovery"
@@ -89,8 +89,8 @@ Project A                          Boilerplate Repo
 /contribute
   → generalizes lesson
   → strips project details
-  → writes to .claude/contributions/
-                                   /pull-contributions /path/to/project-a
+  → writes to <workspace>/contributions/
+                                   /pull-contributions <workspace>/contributions/
                                      → reads contributions
                                      → flags any leaked details
                                      → applies with user approval
@@ -99,7 +99,7 @@ Project A                          Boilerplate Repo
 
 ### How it works
 
-1. **In your project**: Run `/contribute` (or `/contribute "the lesson"`) to generalize a lesson. Claude strips project names, paths, and domain terms, then writes a contribution file to `.claude/contributions/`.
+1. **In your project**: Run `/contribute` (or `/contribute "the lesson"`) to generalize a lesson. Claude strips project names, paths, and domain terms, then writes a contribution file to `<workspace>/contributions/`.
 
 2. **In the boilerplate repo**: Run `/pull-contributions /path/to/your/project` to review and integrate. Each contribution is shown individually for approval. No changes are made without explicit confirmation.
 
@@ -113,13 +113,13 @@ Three scopes keep knowledge organised by ownership:
 |-------|----------|---------|
 | Personal | `<workspace>/me/` | Identity, team roster, brag log, growth notes |
 | Project | `<project>/.claude/memory/` + project root | Process knowledge, domain context, working state |
-| Contributions | `<project>/contributions/` | Generalised lessons staged for boilerplate |
+| Contributions | `<workspace>/contributions/` | Generalised lessons staged for boilerplate |
 
 ### Personal workspace (`<workspace>/me/`)
 
 Bootstrapped by `/setup-workspace init`, built up organically by `/bye`. Not in any git repo — personal to the engineer. `<workspace>` is wherever the user installed the boilerplate (e.g., `~/workspace/`).
 
-```
+```text
 <workspace>/me/
 ├── identity.md          # Role, domains, skills, timezone, platform IDs
 ├── team.md              # Direct reports and their platform IDs (leadership roles)
@@ -131,7 +131,7 @@ Bootstrapped by `/setup-workspace init`, built up organically by `/bye`. Not in 
 
 Working state and skill outputs sit at the **project root** (gitignored). Committed knowledge lives under `.claude/`.
 
-```
+```text
 <project root>/
 ├── workstreams/           # Per-topic working context (gitignored)
 ├── sessions/active/       # Active session markers (gitignored)
@@ -156,7 +156,7 @@ Working state and skill outputs sit at the **project root** (gitignored). Commit
 
 ### Team & leadership features
 
-For engineering managers, directors, and VPs — driven by `~/.claude/me/identity.md` (role) and `~/.claude/me/team.md` (direct reports):
+For engineering managers, directors, and VPs — driven by `<workspace>/me/identity.md` (role) and `<workspace>/me/team.md` (direct reports):
 
 - **`/collect-team-activity`** — collects a team member's daily activity from public Slack, Jira, Confluence, GitHub
 - **`/one-on-one-prep`** — synthesizes collected activity into a structured 1:1 meeting agenda
