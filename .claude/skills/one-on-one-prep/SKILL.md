@@ -35,11 +35,10 @@ Synthesize a team member's recent activity from daily activity files into a stru
 
 3. **Load writing style**: Read the Writing Style section from `<workspace>/me/identity.md`. Apply it to all output. If no style is defined, default to clear and concise.
 
-4. **Load level expectations**: Read `.claude/docs/level-expectations.md` (project-scoped, shared reference).
-   - Extract the row matching the member's level from each section: Identity Anchor, Rating Signal, Impact, Scope, Direction, Problem Landscape, Execution & Craft, Collaboration & Communication, Growth & Citizenship, and (for managers) People Leadership.
-   - These will be surfaced in the prep header as "Level context" — calibration the manager reads alongside the observations.
-   - The local mirror is the contract — the skill does not fetch from any remote canonical (Confluence, Drive, Notion, wiki, etc.) at synthesis time. The mirror's own `Source:` header points at the canonical; manual sync when it changes.
-   - If `.claude/docs/level-expectations.md` is missing, log a `WARNING` via `/log` and continue without the level-context block.
+4. **Load level identity anchor**: Read `.claude/docs/level-expectations.md` (project-scoped, shared reference).
+   - Extract the Identity Anchor for the member's level from the `## Identity anchors` table (one line). Used in the prep header alongside a link to the full file.
+   - The local mirror is the contract — the skill does not fetch from any remote canonical at synthesis time.
+   - If the file is missing, omit the identity anchor text and link from the header; log a `WARNING` via `/log` and continue.
 
 5. **Determine time range**: Parse the arguments for a date range.
    - Explicit range (`YYYY-MM-DD to YYYY-MM-DD`): use as-is.
@@ -114,22 +113,8 @@ Synthesize a team member's recent activity from daily activity files into a stru
    # 1:1 Prep: {Member Name}
    **Generated**: YYYY-MM-DD
    **Period**: YYYY-MM-DD to YYYY-MM-DD
-   **Level**: {Level} — {Identity Anchor for this level}
+   **Level**: {Level} — {Identity Anchor} · [L&E](.claude/docs/level-expectations.md)
    **Activity data**: {X}/{Y} dates covered ({list missing dates, if any})
-
-   ## Level context
-   _Calibration reference for {Level}, from `.claude/docs/level-expectations.md`. Read alongside the observations below._
-
-   - **Identity Anchor**: {full sentence}
-   - **Rating Signal**: {full sentence}
-   - **Impact**: {description for this level}
-   - **Scope**: {description for this level}
-   - **Direction**: {description for this level}
-   - **Problem Landscape**: {description for this level}
-   - **Execution & Craft**: {description for this level}
-   - **Collaboration & Communication**: {description for this level}
-   - **Growth & Citizenship**: {description for this level}
-   - **People Leadership** (managers only): {description for this level}
 
    ## Completed Tasks & Achievements
 
@@ -157,7 +142,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
    3. {Third}
    ```
 
-   If the level-context block can't be populated (no `Level:` for the member, or `.claude/docs/level-expectations.md` missing), omit the block entirely — the rest of the prep stays useful.
+   If `Level:` is missing for the member or `.claude/docs/level-expectations.md` is not found, omit the identity anchor and link from the header — the rest of the prep stays useful.
 
 10. **Report to user** (skip if invoked by another agent):
     ```
@@ -166,7 +151,6 @@ Synthesize a team member's recent activity from daily activity files into a stru
     Period: YYYY-MM-DD to YYYY-MM-DD
     Coverage: {X}/{Y} dates with activity data
     Missing: {dates without data, or "none"}
-    Level context: {loaded / not loaded — reason}
     File: <workspace>/artifacts/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md
     ```
 
@@ -174,7 +158,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
     ```
     /log run_id=<run_id> skill=one-on-one-prep status=<SUCCESS|FAILED|WARNING> detail={member name}: {period}, {coverage}
     ```
-    Use `manual` as run_id if invoked directly by the user. Use `WARNING` if the prep was produced but the level-context block was omitted (missing `Level:` or missing local mirror).
+    Use `manual` as run_id if invoked directly by the user. Use `WARNING` if the prep was produced but the level header is incomplete (missing `Level:` in team.md or missing local mirror).
 
 ## Important Rules
 
