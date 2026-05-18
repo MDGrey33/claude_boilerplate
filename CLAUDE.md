@@ -58,7 +58,9 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine |
+| `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
 | `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
+| `/deep-research-orchestrator` | Run a 9-stage deep research pipeline — breadth, depth, synthesis, gap-fill, contradiction detection, theory, fact-check; tiered output with credibility tagging |
 | `/sanitizer` | Scrub a file/dir/glob for secrets, PII, private context, and tone risks before publishing. Auto-invoked by `/contribute` and `/pull-contributions`. Has a `--check` mode for pre-commit/CI gates. |
 | `/finance-controller` | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Produces a prioritized report; delegates execution to `skills-manager` or asks for approval. Use weekly or when sessions feel slow. |
 | `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |

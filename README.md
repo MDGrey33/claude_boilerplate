@@ -57,6 +57,9 @@ Cognee (optional): `/setup-cognee` detects your environment and installs Python,
 | `/finance-controller` | Manual (weekly sweep) | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Reports + delegates; never edits directly. |
 | `/claude-expert` | Manual | Reference for Claude Code surfaces (skills vs hooks vs subagents vs MCPs vs memory vs settings). Answers "where should this live" and routes to the doer skill. |
 | `/setup-auto-memory` | Manual | Wire in the optional auto-memory system (typed atomic files in `~/.claude/projects/<slug>/memory/`). See `auto-memory/README.md`. |
+| `/setup-playwright-mcp` | Manual | Install and configure Playwright MCP for browser automation |
+| `/setup-nemoclaw` | Manual | Install and configure NVIDIA NemoClaw (secure agent runtime) |
+| `/deep-research-orchestrator` | Manual | Run a 9-stage deep research pipeline — breadth, depth, synthesis, gap-fill, contradiction detection, theory, fact-check; tiered output with credibility tagging |
 
 ### Skill Chains
 
@@ -64,6 +67,7 @@ Cognee (optional): `/setup-cognee` detects your environment and installs Python,
 /hello ──> /mcp-doctor (session mode)
 /bye ──> /lessons ──> /skills-manager
 /setup-cognee ──> /mcp-doctor
+/setup-playwright-mcp ──> /mcp-doctor
 /contribute ──> /sanitizer (blocks staging on any finding)
 /pull-contributions ──> /sanitizer --check (blocks pull on any finding)
 /sanitizer (manual, on any file/dir/glob)
