@@ -33,7 +33,7 @@ Scan active markers from `<workspace>/sessions/active/*.md` and `<workspace>/pro
 
 - One match → scope is `<workspace>` if `project_slug = workspace`, else `<workspace>/projects/<project_slug>`.
 - >1 matches → ask the user which session this invocation is scoped to.
-- 0 matches → if invoked by `/bye`, surface as a bug and abort. If invoked manually, ask the user for scope (workspace or which project).
+- 0 matches → check whether `project_slug` and `session_id` were passed as context from `/bye`. If yes, derive scope from `project_slug` (`<workspace>` if `project_slug = workspace`, else `<workspace>/projects/<project_slug>`) and proceed. If no context was passed, surface as a bug and abort (manual invocation: ask the user for scope instead).
 
 Modes A and B use `<scope>` for input/output paths. Mode C is workspace-wide; the marker is read for scope-attribution decoration only.
 

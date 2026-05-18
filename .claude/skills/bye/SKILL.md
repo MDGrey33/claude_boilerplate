@@ -73,7 +73,7 @@ You are wrapping up the current working session. Summarize, persist, and hand of
    - Tool tips or workarounds found
    - Architectural insights
 
-7. **Capture lessons**: If any lessons were identified, invoke the `/lessons` skill with the identified lessons. Do not pass scope — `/lessons` reads the marker itself.
+7. **Capture lessons**: If any lessons were identified, invoke the `/lessons` skill with the identified lessons. Pass `project_slug` and `session_id` from the session marker as context — the marker is promoted before this step and `/lessons` cannot re-scan `active/`. `/lessons` uses these to resolve scope directly without scanning.
 
 8. **Curate MEMORY.md**: First, read the full lessons inbox at both levels (skip the workspace read if scope = workspace — same file):
    - `<scope>/.claude/memory/lessons-learned.md`
