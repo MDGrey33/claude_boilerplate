@@ -10,7 +10,7 @@ Three scopes, each with its own owner and location:
 |-------|----------|---------|
 | Personal | `<workspace>/me/` | Identity, team roster, brag log, growth notes |
 | Project | `<project>/.claude/memory/` + project root | Process knowledge, domain context, working state |
-| Contributions | `<project>/contributions/` | Generalised lessons staged for boilerplate |
+| Contributions | `<workspace>/contributions/` | Generalised lessons staged for boilerplate |
 
 Project layout:
 
@@ -20,8 +20,7 @@ Project layout:
 ├── sessions/active/       # Active session markers (gitignored)
 ├── sessions/              # Closed session narratives (gitignored)
 ├── collected/             # Raw collection outputs from skills (gitignored)
-├── artifacts/             # Synthesised skill outputs (gitignored)
-└── contributions/         # Staged boilerplate contributions (gitignored)
+└── artifacts/             # Synthesised skill outputs (gitignored)
 
 .claude/
 ├── memory/
@@ -78,7 +77,7 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 Skills in `.claude/skills/` are **deployed copies** — maintained in the boilerplate source, not in service repos. Do not edit them here directly.
 
 To propose a skill improvement:
-1. Use `/contribute` to generalise the lesson and stage it in `contributions/`
+1. Use `/contribute` to generalise the lesson and stage it in `<workspace>/contributions/`
 2. The boilerplate maintainer runs `/pull-contributions` to apply it
 3. Changes land via GitHub PR and maintainer review
 

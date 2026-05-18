@@ -205,7 +205,7 @@ Output: group tickets as "Owned (assignee)" and "Filed (reporter-only)" so downs
 - The `contributor` field already covers comments — a comment is a Confluence contribution. No separate comment query needed.
 - For each result: capture space, title, type of contribution (created vs. updated, page vs. comment), URL.
 
-**GitHub:** Before running any `gh search` command, verify the active session is the cached business handle: run `gh auth status` and confirm the cached handle shows `Active account: true`. If it differs, run `gh auth switch --user {github_handle}` first. The orchestrator normally handles this before fan-out, but executors spawned in isolation must self-check. After the initial check, run plain `gh search` commands without further switching.
+**GitHub:** Before running any `gh search` command, verify the active session is the cached business handle: run `gh auth status` and confirm the cached handle shows `Active account: true`. If it differs, **fail with PARTIAL** and record the mismatch in `## Gaps` — do not call `gh auth switch`. The orchestrator sets the active account before fan-out; a mismatch here means the orchestrator step failed upstream. After a clean verification, run plain `gh search` commands without further switching.
 
 Use **full ISO timestamps with the member's TZ offset**, not bare `YYYY-MM-DD`. Bare dates are interpreted as UTC, so for non-UTC member TZs the window slips by the offset (e.g., for Asia/Dubai, `--created "2026-04-30..2026-04-30"` covers UTC 04-30 = local 04-30 04:00 → 05-01 04:00, missing 4 hours of local 04-30 and including 4 hours of local 05-01).
 
@@ -331,7 +331,7 @@ Each executor sub-agent emits its own per-pair log entry (E4 above). Use `manual
 - **Don't fabricate activity.** Only report what you find in the data sources. If someone had a quiet day, say so — that's useful signal too.
 - **Never infer technical system names from shared vocabulary.** Use the exact service or system name from the source. If a source names an endpoint or service explicitly (e.g., `zeebe-cluster-gateway-zeebe-0`), use that name — do not substitute a related system (e.g., "Kafka") because they share vocabulary ("broker", "partition", "leader"). If the system name genuinely cannot be read from the source, write "system unclear" rather than guessing.
 - **Gap notes are factual, not speculative.** When a source returns zero results, record the fact (e.g., "GitHub: 0 results in window"). Do not speculate on the cause ("likely private repo", "alternate handle", "permissions issue") unless verified — speculation in gap notes misleads downstream readers.
-- **Public sources only.** No DMs, no private channels. This is intentional and aligns with the team's public-by-default communication culture.
+- **No DMs.** Direct messages are not accessible via MCP and are out of scope. Private channels are in scope — this skill uses `slack_search_public_and_private` because leadership-relevant decisions surface in private channels. Access is bounded by what the caller's Slack token can see.
 - **Respect date boundaries.** Only include activity within the requested date range.
 - **Always write the output file** — even on failure. The Status field (SUCCESS/PARTIAL/FAILED) lets calling agents check the result programmatically.
 - **Don't duplicate with `/collect-my-activity`.** This skill collects *other people's* activity. For the user's own activity, use `/collect-my-activity`.

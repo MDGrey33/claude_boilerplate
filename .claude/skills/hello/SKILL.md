@@ -115,7 +115,7 @@ If cognee is loaded (per /mcp-doctor's report), call `cognee_search "project con
 
 ### 11. Resolve workstream
 
-To seed the hint: list `<scope>/sessions/*.md`, sort descending by filename, take the most recent. Extract the workstream slug from the filename (`<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md` — the slug is the middle segment between the date and the timestamp). If no session files exist, skip the hint.
+To seed the hint: list `<scope>/sessions/*.md`, parse `<YYYY-MM-DD>` and `<HHMMSS>` from each filename, sort by parsed datetime descending, take the most recent. Extract the workstream slug from the filename (`<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md` — the slug is the middle segment between the date and the timestamp). If no session files exist, skip the hint.
 
 Phrasing branches on whether a recent session file was found:
 
