@@ -45,6 +45,7 @@ STARTER_MAP = [
     ("MEMORY.md", ".claude/memory/MEMORY.md"),
     ("lessons-learned.md", ".claude/memory/lessons-learned.md"),
     ("project-context.md", ".claude/memory/project-context.md"),
+    ("feedback_doc_maintenance_discipline.md", ".claude/memory/feedback_doc_maintenance_discipline.md"),
     ("identity.md", "me/identity.md"),
     ("brag-log.md", "me/brag-log.md"),
     ("growth.md", "me/growth.md"),

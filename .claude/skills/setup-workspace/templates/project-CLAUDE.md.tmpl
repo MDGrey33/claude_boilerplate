@@ -32,16 +32,25 @@ Any output produced by a skill or session — feedback files, generated document
 
 Resolve scope from the session marker, never from cwd. Workspace-scoped artefacts live at the workspace root's `artifacts/`, not here.
 
-## Conventions
-
-<!-- Fill in project-specific conventions -->
-- Language:
-- Framework:
-- Test runner:
-- Formatting:
-
 ## Detailed Docs
 
 Reference files for on-demand context (load with `@`):
 - `.claude/docs/architecture.md` — project architecture and structure
 - `.claude/docs/conventions.md` — code style and patterns
+
+## Keeping docs in sync
+
+`README.md`, `CLAUDE.md`, `.claude/memory/project-context.md`, `.claude/docs/architecture.md` and `.claude/docs/conventions.md` are part of the codebase — they move in the same change as the code that affects them, not deferred to a separate cleanup PR. A stale doc is worse than no doc.
+
+Before closing a change, check whether it touches anything in the left column below and update the matching doc(s) in the same commit. The rows are illustrative — adapt to this project's actual doc surfaces and remove rows that don't apply.
+
+| If you changed... | Update... |
+|---|---|
+| Public API / CLI surface (commands, flags, exported functions) | `README.md`, `CLAUDE.md` |
+| Architecture, data flow, directory structure | `.claude/docs/architecture.md` |
+| Code style, naming patterns, error-handling conventions | `.claude/docs/conventions.md` |
+| External dependencies, env vars, setup steps | `README.md`, `.claude/docs/architecture.md` |
+| Domain rules, version floors, constants the business cares about | `.claude/memory/project-context.md` |
+| Non-obvious decision or gotcha worth remembering | `.claude/memory/MEMORY.md` (not the docs above) |
+
+`MEMORY.md` is not a substitute for these docs — it captures non-derivable context (decisions, gotchas, past incidents). If you find yourself wanting to write a how-it-works note in memory, write it in the docs instead.
