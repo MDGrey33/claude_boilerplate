@@ -91,17 +91,25 @@ To propose a skill improvement:
 4. **End**: `/bye` when done
 5. **Sync** (periodic): `/setup-workspace sync` to pull upstream skill updates
 
-## Project Conventions
-
-<!-- Fill in per project -->
-- Language:
-- Framework:
-- Test runner:
-- Formatting:
-
 ## Detailed Docs
 
 Refer to these files for more detail (use `@` to include them in context):
-- `.claude/docs/architecture.md` — project architecture and structure
+- `.claude/docs/architecture.md` — boilerplate architecture
 - `.claude/docs/conventions.md` — code style and patterns
 - `.claude/docs/cognee-usage.md` — how to use cognee MCP tools for semantic memory
+- `.claude/docs/agent-guardrails.md` — operational rules for agents working in this repo
+
+## Keeping docs in sync
+
+`README.md`, this `CLAUDE.md`, `.claude/docs/*` and each skill's `SKILL.md` are part of the boilerplate — they move in the same change as the code that affects them, not deferred. A stale doc is worse than no doc (see `<workspace>/.claude/memory/feedback_doc_maintenance_discipline.md` for the general principle; this section is the boilerplate-specific mapping).
+
+| If you changed... | Update... |
+|---|---|
+| Added / removed / renamed a skill | `README.md` (Skills Reference table + skill chains), this `CLAUDE.md` (Available Skills table + skill chains) |
+| Behaviour of a skill (steps, flags, inputs) | that skill's `SKILL.md` |
+| Setup / workflow steps a user follows | `README.md` (Quick Start), this `CLAUDE.md` (Workflow) |
+| A template under `.claude/skills/setup-workspace/templates/` | the template itself; and if structural, `init.py` or `add_project.py` `STARTER_MAP` |
+| An agent operating rule | `.claude/docs/agent-guardrails.md` (overwritten by `init` and `sync` — the boilerplate is the canonical source) |
+| Architecture, lifecycle, or skill-chain wiring | `.claude/docs/architecture.md` |
+| Code style, file organisation, naming patterns | `.claude/docs/conventions.md` |
+| A new doc surface | the row above for that surface, and this table |
