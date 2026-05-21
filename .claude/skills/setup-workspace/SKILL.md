@@ -153,7 +153,7 @@ The script handles validation, idempotent scaffolding, template substitution, an
 
 ## `sync`
 
-Update upstream-owned content (`.claude/skills/`, `.claude/agents/`, `.claude/docs/agent-guardrails.md`) in the workspace from the source clone. Conservative — detects local changes and asks for consent before overwriting.
+Update upstream-owned content in the workspace from the source clone, and surface any new starter files (memory entries, identity templates, etc.) that have been added to the boilerplate since init. Conservative — detects local changes and asks for consent before overwriting.
 
 ### When to use
 
@@ -166,25 +166,26 @@ After the user pulls upstream changes into the source clone (e.g., `cd ~/src/cla
 
 ### Behavior
 
-The action is **conservative** (unlike `init`, which overwrites upstream-owned content unconditionally):
+Walks two surfaces and reports them in separate sections:
 
-- Walks `.claude/skills/**`, `.claude/agents/**`, and `.claude/docs/agent-guardrails.md`.
-- Compares each file byte-for-byte between source and workspace.
-- Reports four categories: `unchanged`, `update` (workspace differs), `new` (in source, not workspace), `local-only` (in workspace, not source — user-added).
-- Asks the user which `update` + `new` files to apply. `local-only` files are never touched.
-- Does NOT touch `CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `project-context.md`, identity, brag log, growth, team, workstreams, sessions, settings.json, or other `docs/*` templates.
+1. **Upstream-owned content** — `.claude/skills/**`, `.claude/agents/**`, `.claude/docs/agent-guardrails.md`. Bucketed as `unchanged`, `update`, `new`, `local-only`. `update` and `new` are actionable; `local-only` is never touched.
+2. **Starter files** — `templates/starters/workspace/**` mapped to workspace paths plus, for each registered project, `templates/starters/project/**` mapped to the project's paths. Bucketed the same way but the `update` bucket is **suppressed** — it surfaces as `divergent` (informational only). Starters are user-evolved after init; sync never offers to overwrite a workspace copy that has diverged.
+
+Only `new` starters are actionable. When a starter `feedback_*.md` lands under `.claude/memory/`, sync emits a hint reminding the user that the matching index line in `MEMORY.md` was not added automatically (because the user's `MEMORY.md` is itself a starter that's diverged).
+
+Does NOT touch `CLAUDE.md`, workstreams, sessions, settings.json, or other `docs/*` templates. The starter walk reports divergence for memory/identity files but never overwrites.
 
 ### Steps
 
 1. **Pre-flight:** confirm cwd is the workspace (`.claude/.workspace` present). Resolve source via `--source` or `.claude/.source`.
-2. **Run the planner:** `python3 .claude/skills/setup-workspace/scripts/sync.py --workspace <path> [--source <path>]`. The script prints a structured plan with file paths grouped by category.
-3. **Show the user the plan.** For non-empty `update` and `new` sections, ask:
+2. **Run the planner:** `python3 .claude/skills/setup-workspace/scripts/sync.py --workspace <path> [--source <path>]`. The script prints a structured plan with file paths grouped by category, with separate sections for upstream-owned content and starters.
+3. **Show the user the plan.** For non-empty `update`, `new`, and `starter new` sections, ask:
    - Apply all (`--apply-all`)?
-   - Apply specific files (collect a list of relative paths)?
-   - Show a diff for any file before deciding (use `diff <source>/<path> <workspace>/<path>` or the Read tool)?
+   - Apply specific files (collect a list of relative paths or starter display paths)?
+   - Show a diff for any file before deciding (use `diff` on the actual source/workspace paths)?
    - Skip entirely?
-4. **Apply chosen changes:** re-run `sync.py` with `--apply-all` or `--apply <relpath>...`. The script copies source-version files to the workspace and prints what was applied.
-5. **Print summary:** what was applied, what was kept, what remains as `local-only` (so the user knows their custom additions are preserved).
+4. **Apply chosen changes:** re-run `sync.py` with `--apply-all` or `--apply <relpath>...`. The script copies source-version files to the workspace and prints what was applied. If a `feedback_*.md` starter landed, also surface the hint so the user can manually add the index line to their `MEMORY.md`.
+5. **Print summary:** what was applied, what was kept, what remains as `local-only` or starter `divergent` (so the user knows their custom additions are preserved).
 
 ### Implementation
 

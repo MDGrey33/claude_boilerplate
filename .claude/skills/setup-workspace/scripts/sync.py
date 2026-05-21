@@ -3,44 +3,58 @@
 
 Usage:
     sync.py --workspace <path> [--source <path>]                  # report only
-    sync.py --workspace <path> [--source <path>] --apply-all      # apply every update + new file
+    sync.py --workspace <path> [--source <path>] --apply-all      # apply every update + new file (incl. starter new)
     sync.py --workspace <path> [--source <path>] --apply <relpath>...   # apply specific files
 
-Compares the workspace's upstream-owned content against the source clone:
-    - .claude/skills/**
-    - .claude/agents/**
-    - .claude/docs/agent-guardrails.md
+Walks two surfaces:
 
-Categorises each file as:
+  1. Upstream-owned content (`.claude/skills/**`, `.claude/agents/**`,
+     `.claude/docs/agent-guardrails.md`) — fully bucketed and acted on.
+  2. Starter files (workspace-level + per-registered-project) — bucketed
+     with the `update` bucket SUPPRESSED. Starters are user-evolved after
+     init; sync only ever offers to deploy `new` ones, never to overwrite
+     a workspace copy that has diverged from source.
+
+Bucket meanings:
     unchanged    workspace matches source
     update       workspace differs from source (locally edited or upstream changed)
+                   — only actionable for upstream-owned content; for starters,
+                   surfaced as `divergent` and never applied
     new          source has the file, workspace doesn't
-    local-only   workspace has the file, source doesn't (likely user-added)
+    local-only   workspace has the file, source doesn't (user-added)
 
-Default mode prints the plan and exits. Apply modes write source-version files
-to the workspace for the named (or all) update/new paths. local-only files are
+Default mode prints the plan and exits. Apply modes copy source-version files
+to the workspace for the named (or all) actionable paths. local-only files are
 never touched — sync doesn't remove user-added content.
 
 Source path defaults to the absolute path stored in `<workspace>/.claude/.source`
 (written by `init.py`). Pass `--source` explicitly to override.
 
-Does NOT touch user-evolved content: CLAUDE.md, MEMORY.md, lessons-learned.md,
+Does NOT touch user-evolved content directly: CLAUDE.md, MEMORY.md, lessons-learned.md,
 identity, workstreams, sessions, settings.json, project-context.md, or other
-.claude/docs/* templates.
+.claude/docs/* templates. The starter walk does *report* divergence for files in
+these categories, but never overwrites.
 """
 
 import argparse
 import filecmp
+import json
 import shutil
 import sys
 from pathlib import Path
 
+from _starter_maps import PROJECT_STARTERS, WORKSPACE_STARTERS
+
 WORKSPACE_MARKER_REL = ".claude/.workspace"
 SOURCE_REF_REL = ".claude/.source"
 SOURCE_BOILERPLATE_MARKER_REL = ".claude/skills/setup-workspace/templates/workspace-CLAUDE.md.tmpl"
+REGISTRY_REL = ".claude/projects-index.json"
 
 SYNCED_DIRS = [".claude/skills", ".claude/agents"]
 SYNCED_FILES = [".claude/docs/agent-guardrails.md"]
+
+STARTERS_WORKSPACE_DIR_REL = ".claude/skills/setup-workspace/templates/starters/workspace"
+STARTERS_PROJECT_DIR_REL = ".claude/skills/setup-workspace/templates/starters/project"
 
 # Skipped during comparison (runtime artifacts, OS metadata).
 SKIP_DIR_NAMES = {"__pycache__"}
@@ -109,7 +123,7 @@ def walk_synced(root: Path, rel_root: str) -> list[str]:
 
 
 def build_plan(workspace: Path, source: Path) -> dict:
-    """Return {update, new, local_only, unchanged} lists of relative paths."""
+    """Return upstream-owned buckets keyed as {update, new, local_only, unchanged} (relative paths)."""
     source_paths: set[str] = set()
     workspace_paths: set[str] = set()
 
@@ -142,12 +156,101 @@ def build_plan(workspace: Path, source: Path) -> dict:
     return {"update": update, "new": new, "local_only": local_only, "unchanged": unchanged}
 
 
-def print_plan(workspace: Path, source: Path, plan: dict) -> None:
+def registered_project_slugs(workspace: Path) -> list[str]:
+    """Read the workspace registry. Empty list if missing/malformed."""
+    registry = workspace / REGISTRY_REL
+    if not registry.is_file():
+        return []
+    try:
+        data = json.loads(registry.read_text())
+    except (json.JSONDecodeError, OSError):
+        return []
+    return sorted((data.get("projects") or {}).keys())
+
+
+def _categorise(src: Path, dst: Path) -> str:
+    in_src = src.is_file()
+    in_dst = dst.is_file()
+    if in_src and not in_dst:
+        return "new"
+    if in_dst and not in_src:
+        return "local_only"
+    if in_src and in_dst:
+        return "unchanged" if filecmp.cmp(src, dst, shallow=False) else "divergent"
+    return "missing"
+
+
+def build_starter_plan(workspace: Path, source: Path) -> dict:
+    """Walk starter files (workspace + per-registered-project).
+
+    Returns {divergent, new, local_only, unchanged} lists of display paths
+    (`<starter-class>/<dest-relpath>`, e.g. `workspace/.gitignore` or
+    `projects/foo/.claude/memory/MEMORY.md`) and a `sources` dict mapping
+    each display path to its absolute source Path. `divergent` mirrors
+    the `update` bucket but is never actionable — starters are user-evolved.
+    """
+    divergent, new, local_only, unchanged = [], [], [], []
+    sources: dict[str, Path] = {}
+    dests: dict[str, Path] = {}
+
+    starters_workspace = source / STARTERS_WORKSPACE_DIR_REL
+    if starters_workspace.is_dir():
+        for src_name, dst_relpath in WORKSPACE_STARTERS:
+            src_path = starters_workspace / src_name
+            dst_path = workspace / dst_relpath
+            display = f"workspace/{dst_relpath}"
+            sources[display] = src_path
+            dests[display] = dst_path
+            bucket = _categorise(src_path, dst_path)
+            if bucket == "new":
+                new.append(display)
+            elif bucket == "divergent":
+                divergent.append(display)
+            elif bucket == "unchanged":
+                unchanged.append(display)
+            elif bucket == "local_only":
+                local_only.append(display)
+            # "missing" (neither side has it) is impossible here since WORKSPACE_STARTERS lists source files
+
+    starters_project = source / STARTERS_PROJECT_DIR_REL
+    if starters_project.is_dir():
+        for slug in registered_project_slugs(workspace):
+            project_dir = workspace / "projects" / slug
+            if not project_dir.is_dir() and not project_dir.is_symlink():
+                continue  # project missing on disk; surfaced by /project-registry, not here
+            for src_name, dst_relpath in PROJECT_STARTERS:
+                src_path = starters_project / src_name
+                dst_path = project_dir / dst_relpath
+                display = f"projects/{slug}/{dst_relpath}"
+                sources[display] = src_path
+                dests[display] = dst_path
+                bucket = _categorise(src_path, dst_path)
+                if bucket == "new":
+                    new.append(display)
+                elif bucket == "divergent":
+                    divergent.append(display)
+                elif bucket == "unchanged":
+                    unchanged.append(display)
+                elif bucket == "local_only":
+                    local_only.append(display)
+
+    return {
+        "divergent": sorted(divergent),
+        "new": sorted(new),
+        "local_only": sorted(local_only),
+        "unchanged": sorted(unchanged),
+        "sources": sources,
+        "dests": dests,
+    }
+
+
+def print_plan(workspace: Path, source: Path, plan: dict, starter_plan: dict) -> None:
     print()
     print("=== sync plan ===")
     print(f"workspace: {workspace}")
     print(f"source:    {source}")
     print()
+    print("-- upstream-owned (skills, agents, agent-guardrails) --")
     print(f"== update ({len(plan['update'])}) ==")
     for rel in plan["update"]:
         print(f"M {rel}")
@@ -162,25 +265,71 @@ def print_plan(workspace: Path, source: Path, plan: dict) -> None:
     print()
     print(f"== unchanged ({len(plan['unchanged'])} files match source) ==")
     print()
+    print("-- starters (workspace + registered projects; divergent never applied) --")
+    print(f"== starter new ({len(starter_plan['new'])}) ==")
+    for rel in starter_plan["new"]:
+        print(f"+ {rel}")
+    print()
+    print(f"== starter divergent ({len(starter_plan['divergent'])}) — informational; never applied ==")
+    for rel in starter_plan["divergent"]:
+        print(f"~ {rel}")
+    print()
+    print(f"== starter local-only ({len(starter_plan['local_only'])}) ==")
+    for rel in starter_plan["local_only"]:
+        print(f"? {rel}")
+    print()
+    print(f"== starter unchanged ({len(starter_plan['unchanged'])} files match source) ==")
+    print()
 
 
-def apply_paths(workspace: Path, source: Path, plan: dict, paths: list[str]) -> tuple[list[str], list[str]]:
-    """Copy named paths from source to workspace. Returns (applied, skipped_with_reason)."""
-    eligible = set(plan["update"]) | set(plan["new"])
+def _is_feedback_starter(display: str) -> bool:
+    """True if the starter destination is a `feedback_*.md` under a `.claude/memory/` dir."""
+    return display.rsplit("/", 1)[-1].startswith("feedback_") and "/.claude/memory/" in f"/{display}"
+
+
+def apply_paths(
+    workspace: Path,
+    source: Path,
+    plan: dict,
+    starter_plan: dict,
+    paths: list[str],
+) -> tuple[list[str], list[str], list[str]]:
+    """Copy named paths from source to workspace.
+
+    `paths` may mix upstream-owned relpaths (e.g. `.claude/skills/foo/SKILL.md`)
+    and starter display paths (e.g. `workspace/.claude/memory/feedback_foo.md`).
+
+    Returns (applied, skipped_with_reason, feedback_hints) — feedback_hints names
+    any feedback starter files that landed in workspace memory, so the caller can
+    surface a "consider updating MEMORY.md" nudge.
+    """
+    synced_eligible = set(plan["update"]) | set(plan["new"])
+    starter_eligible = set(starter_plan["new"])
     applied: list[str] = []
     skipped: list[str] = []
+    feedback_hints: list[str] = []
 
-    for rel in paths:
-        if rel not in eligible:
-            skipped.append(f"{rel} (not in update/new plan)")
-            continue
-        src = source / rel
-        dst = workspace / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
-        applied.append(rel)
+    for path in paths:
+        if path in synced_eligible:
+            src = source / path
+            dst = workspace / path
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            applied.append(path)
+        elif path in starter_eligible:
+            src = starter_plan["sources"][path]
+            dst = starter_plan["dests"][path]
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            applied.append(path)
+            if _is_feedback_starter(path):
+                feedback_hints.append(path)
+        elif path in starter_plan["divergent"]:
+            skipped.append(f"{path} (starter divergent — never auto-applied; edit by hand if needed)")
+        else:
+            skipped.append(f"{path} (not in any actionable bucket)")
 
-    return applied, skipped
+    return applied, skipped, feedback_hints
 
 
 def parse_args() -> argparse.Namespace:
@@ -203,13 +352,17 @@ def main() -> None:
     workspace = resolve_workspace(args.workspace)
     source = resolve_source(args.source, workspace)
     plan = build_plan(workspace, source)
+    starter_plan = build_starter_plan(workspace, source)
 
     if not args.apply and not args.apply_all:
-        print_plan(workspace, source, plan)
+        print_plan(workspace, source, plan, starter_plan)
         return
 
-    targets = plan["update"] + plan["new"] if args.apply_all else args.apply
-    applied, skipped = apply_paths(workspace, source, plan, targets)
+    if args.apply_all:
+        targets = plan["update"] + plan["new"] + starter_plan["new"]
+    else:
+        targets = args.apply
+    applied, skipped, feedback_hints = apply_paths(workspace, source, plan, starter_plan, targets)
 
     print()
     print("=== sync apply ===")
@@ -224,6 +377,13 @@ def main() -> None:
         print(f"Skipped ({len(skipped)}):")
         for note in skipped:
             print(f"  · {note}")
+    if feedback_hints:
+        print()
+        print("Hint: the following feedback starter file(s) landed but your MEMORY.md")
+        print("was not modified (starters are user-owned post-init). To add the index")
+        print("line, copy the matching bullet from the boilerplate's MEMORY.md:")
+        for display in feedback_hints:
+            print(f"  · {display}")
     print()
 
 
