@@ -36,22 +36,13 @@ ROOT_DIRS = ["workstreams", "sessions/active", "artifacts", "me"]
 # Dirs to create under .claude/
 CLAUDE_DIRS = ["memory", "skills", "agents", "docs"]
 
-# Starter files copied (only written if missing).
-# (source_filename_under_STARTERS_DIR_REL, destination_relpath_from_workspace)
-# Edit the files under templates/starters/workspace/ to change starter content;
-# the gitignore source has its leading dot stripped (filesystems get weird with
-# dotfile-only directories) and is materialised as `.gitignore` at the workspace.
-STARTER_MAP = [
-    ("MEMORY.md", ".claude/memory/MEMORY.md"),
-    ("lessons-learned.md", ".claude/memory/lessons-learned.md"),
-    ("project-context.md", ".claude/memory/project-context.md"),
-    ("feedback_doc_maintenance_discipline.md", ".claude/memory/feedback_doc_maintenance_discipline.md"),
-    ("identity.md", "me/identity.md"),
-    ("brag-log.md", "me/brag-log.md"),
-    ("growth.md", "me/growth.md"),
-    ("team.md", "me/team.md"),
-    ("gitignore", ".gitignore"),
-]
+# Starter files copied (only written if missing). Edit the files under
+# templates/starters/workspace/ to change starter content. To add or remove a
+# starter, edit `_starter_maps.WORKSPACE_STARTERS` so init, add_project, and
+# sync stay aligned. The gitignore source has its leading dot stripped
+# (filesystems get weird with dotfile-only directories) and is materialised as
+# `.gitignore` at the workspace.
+from _starter_maps import WORKSPACE_STARTERS as STARTER_MAP  # noqa: E402
 
 # Module-level state set by main()
 _WORKSPACE: Path | None = None

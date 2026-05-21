@@ -46,17 +46,11 @@ GITIGNORE_PATTERNS = [
 ]
 GITIGNORE_HEADER = "# Per-engineer working state — never commit"
 
-# Starter files copied (only written if missing).
-# (source_filename_under_STARTERS_DIR_REL, destination_relpath_from_project)
-# Edit the files under templates/starters/project/ to change starter content.
-STARTER_MAP = [
-    ("MEMORY.md", ".claude/memory/MEMORY.md"),
-    ("lessons-learned.md", ".claude/memory/lessons-learned.md"),
-    ("project-context.md", ".claude/memory/project-context.md"),
-    ("settings.json", ".claude/settings.json"),
-    ("architecture.md", ".claude/docs/architecture.md"),
-    ("conventions.md", ".claude/docs/conventions.md"),
-]
+# Starter files copied (only written if missing). Edit the files under
+# templates/starters/project/ to change starter content. To add or remove a
+# starter, edit `_starter_maps.PROJECT_STARTERS` so init, add_project, and
+# sync stay aligned.
+from _starter_maps import PROJECT_STARTERS as STARTER_MAP  # noqa: E402
 
 # Module-level state set by main()
 _WORKSPACE: Path | None = None
