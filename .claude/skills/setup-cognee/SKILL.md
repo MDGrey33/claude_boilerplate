@@ -2,247 +2,300 @@
 name: setup-cognee
 description: Install and configure cognee-mcp on this machine
 user_invocable: true
-args: Optional preferred preset (recommended, minimal, docker)
+args: Optional storage backend (file-based, postgres) or --refresh-setup
 ---
 
 # Setup Cognee — Install & Configure cognee-mcp
 
-You are helping the user get cognee-mcp running on their machine. Walk through setup interactively, detecting what's already installed and what needs to be done.
+You are helping the user get cognee-mcp running on this machine. Walk through setup interactively, detecting what is already installed and what needs to be done.
 
-**Important**: The cognee MCP server is run from a local clone of the cognee repo (the `cognee-mcp/` subdirectory) or via the Docker image `cognee/cognee-mcp:main`. There is no PyPI package — do not attempt `uvx`, `pip install`, or any package-manager-based installation.
+**Important**: The cognee MCP server runs from a local clone of the cognee repo (the `cognee-mcp/` subdirectory) or via the Docker image `cognee/cognee-mcp:main`. There is no PyPI package — do not attempt `uvx`, `pip install`, or any package-manager-based installation.
 
-## Step 0: Check Latest Documentation
+## Configuration model
 
-Before executing any installation steps, look up current documentation:
-- Search the web for "cognee MCP server setup" to find current instructions
-- Check https://github.com/topoteretes/cognee for the `cognee-mcp/` subdirectory README
-- Use findings to inform installation commands — if docs show different flags, dependencies, or steps than what this skill describes, **adapt accordingly** and tell the user what changed
+Two config files are involved:
 
-## Step 1: Detect Environment
+- **`.mcp.json`** (workspace root) — **canonical source of truth**. Claude Code reads this to launch the cognee MCP server. The `env` block is what the skill writes and edits.
+- **`cognee-mcp/.env`** — **generated artifact**, derived verbatim from `.mcp.json`'s `env` block. Cognee's `__init__.py` calls `dotenv.load_dotenv(override=True)`, so any `.env` in cognee's dotenv search path overrides the env Claude Code provides. Keeping it aligned prevents drift; keeping it present at all shields the setup from any higher `.env` (cognee's walk-up search terminates at the first `.env` it finds).
 
-Detect what's available on this machine:
-- **OS and platform** (macOS, Linux, WSL — affects Docker host address, shell profile path, package managers)
-- **Available tools**: `git`, `python3` (version — need 3.10+), `uv`, `docker`, `docker compose` vs `docker-compose`
-- **Current shell** (from `$SHELL` — determines which profile file to suggest for env vars)
-- **Whether `LLM_API_KEY` is set** in the current environment
-- **Whether port 5432 is in use** (existing Postgres instance)
-- **Whether cognee is already cloned** (check common locations: `~/cognee`, project-relative)
-- **Whether `.mcp.json` already exists** in the project root (and what's in it)
-- **Whether `.env` already exists** in the project root
+`.env` carries a header marking it as generated. Users edit `.mcp.json` and re-run `/setup-cognee --refresh-setup` to propagate.
 
-Report findings to the user before proceeding.
+**Probe isolation**: when the graph DB is the default file-based Ladybug, the in-session cognee MCP holds an exclusive lock on `<SYSTEM_ROOT>/databases/cognee_graph_ladybug` from Claude Code session boot. Verification probes must override `SYSTEM_ROOT_DIRECTORY` to a temp dir to avoid contention; `DATA_ROOT_DIRECTORY` gets overridden alongside for cleanliness — not lock-avoidance — so probe markers don't pollute the user's data. With a remote graph DB (Neo4j), no lock contention; isolation is still cleaner.
+
+## Verification modes
+
+Three layers, each covers different ground:
+
+1. **`/setup-cognee --refresh-setup`** — re-syncs deps, provider extras, `.env`, then runs an end-to-end stdio probe against isolated data dirs. Covers everything post-install: dependency drift, provider extras after a `git pull`, `.env` drift, runtime config correctness.
+2. **`/mcp-doctor`** (session mode) — confirms cognee tools surface in-session after a Claude Code restart. Covers MCP-server-load only.
+3. **Fresh tear-down + reinstall** (manual) — `rm -rf <cognee-mcp>/.venv <DATA_ROOT> <SYSTEM_ROOT>`, then `/setup-cognee`. Covers the install path itself (clone, initial `.mcp.json` write, interactive prompts). Run after major cognee version bumps or whenever this skill is edited. Not automated — the install is interactive.
+
+## --refresh-setup mode
+
+Run after a cognee-mcp `git pull` or `.mcp.json` edit. Three things drift independently, each with its own corrective action:
+
+- **Lockfile vs installed deps — and cognee itself.** `uv sync` restores whatever the repo's lockfile pins. Upstream cognee fixes ship to PyPI ahead of the committed lockfile (the AnthropicAdapter `max_tokens` bug in cognee <1.1.0 was the canonical case). Record the currently installed cognee version first so the rollback gate (below) has something to pin back to. Advance cognee with `uv sync --upgrade-package cognee`; fall back to the lockfile version on resolution or network failure.
+- **Provider extras.** `uv add` writes to `pyproject.toml`, which a `git pull` may overwrite. Re-apply the extras declared in `.mcp.json` (`LLM_PROVIDER`, `EMBEDDING_PROVIDER`). After each change, run an import-check rollback gate: if the configured provider's adapter no longer imports, pin cognee back to the pre-upgrade version. Read installed cognee source for the import path — cognee reorganises these between versions.
+- **`.env` vs `.mcp.json`.** Cognee's `__init__.py` calls `dotenv.load_dotenv(override=True)`, so a stale `.env` silently wins over the env Claude Code provides. Compare, and strict-regenerate from `.mcp.json` on any drift — values OR a missing generated-artifact header.
+
+Then exercise the install end-to-end via the stdio probe (see Step 5 Phase 1) — with `SYSTEM_ROOT_DIRECTORY` (and `DATA_ROOT_DIRECTORY` for cleanliness) overridden to a temp dir so it doesn't contend with the in-session cognee's Ladybug lock. Validate the real `DATA_ROOT_DIRECTORY` / `SYSTEM_ROOT_DIRECTORY` from `.mcp.json` separately with a writability check — no subprocess needed.
+
+After the probe passes, tell the user to restart Claude Code; the in-session cognee still has the previous config cached in memory.
+
+Common failure modes:
+- `[Errno 61] Connect call failed ('127.0.0.1', 5432)` — `.env` still declares Postgres; regenerate from `.mcp.json`.
+- `Embedding connection test timed out` — `EMBEDDING_PROVIDER` not set or unreachable.
+- `ModuleNotFoundError: <provider>` — provider extra not installed; re-apply it.
+- `Field required ... data` — schema mismatch; the probe is hardcoding param names instead of reading the input schema.
+- `IO exception: Could not set lock on file ... cognee_graph_ladybug` — `SYSTEM_ROOT_DIRECTORY` override didn't apply for the probe.
+
+## Step 0: Check latest documentation
+
+Look up current cognee MCP setup docs before executing install steps — flags, deps, or steps may have changed since this skill was written. Tell the user what changed if anything differs.
+
+## Step 1: Detect environment
+
+Detect what's available:
+- OS and platform (affects Docker host address, shell profile path)
+- Available tools: `git`, `python3` (3.10–3.13 — cognee deps have no wheels for 3.14 yet), `uv`, `docker`, `docker compose`
+- Current shell (from `$SHELL`)
+- Whether `LLM_API_KEY` is already set
+- Whether port 5432 is in use (Postgres backend only)
+- Whether cognee is already cloned (`~/cognee`, project-relative)
+- Whether `.mcp.json` and `cognee-mcp/.env` already exist, and what's in them
+
+Report findings before proceeding.
 
 ## Determining DB_HOST
 
-After detecting the environment, apply this principle whenever writing database host addresses to `.env` or `.mcp.json`. Both files should use the address appropriate for the process that reads them.
+Only relevant for the Postgres backend. The address depends on where the cognee process runs relative to the database:
 
-| Connecting process runs… | DB runs in… | DB_HOST value |
+| Connecting process | DB runs in | DB_HOST |
 |---|---|---|
 | Locally (Python on host) | Docker container on host | `127.0.0.1` |
 | In Docker container | Same docker compose stack | Service name (e.g., `postgres`) |
-| In Docker container | Host machine directly | OS-dependent: `host.docker.internal` on macOS, bridge IP on Linux |
+| In Docker container | Host machine directly | macOS: `host.docker.internal`. Linux: bridge IP. |
 
-**Key rule**: Both `.env` and `.mcp.json` are read by the cognee-mcp process. Use the address that matches where that process runs relative to the database. Do not mix — e.g., don't put `host.docker.internal` in `.env` if the process reading it runs on the host.
+The address in `.mcp.json`'s env is the one the cognee process will use.
 
-## Default Database Credentials
+## Default database credentials
 
-When a preset requires PostgreSQL, use these dev-only defaults unless the user specifies otherwise. Reference this section from any goal that writes DB config to `.env` or `.mcp.json`.
+Dev-only defaults for the Postgres backend (communicate "dev-only" to the user):
 
 | Variable | Default | Notes |
 |---|---|---|
 | `DB_PROVIDER` | `postgres` | |
-| `DB_HOST` | Per **Determining DB_HOST** | Never hardcode — always derive |
-| `DB_PORT` | `5432` | Check if already in use first |
-| `DB_NAME` | `cognee_db` | Dev default |
-| `DB_USER` | `cognee` | Dev default |
-| `DB_PASSWORD` | `cognee` | Dev default — communicate to user these are insecure |
+| `DB_HOST` | per Determining DB_HOST | derive, don't hardcode |
+| `DB_PORT` | `5432` | check if already in use |
+| `DB_NAME` | `cognee_db` | |
+| `DB_USERNAME` | `cognee` | cognee uses `db_username` (pydantic-settings); `DB_USER` is silently ignored |
+| `DB_PASSWORD` | `cognee` | dev-only, insecure |
 
-These are for local development only. For production or shared environments, use unique credentials.
+## Step 2: Choose storage backend
 
-## Step 2: Choose Preset
+Two backends. Recommend the first.
 
-Present three presets, recommending the first. If the user passed a preset argument, use that.
+| Backend | Description | Requires | When to pick |
+|---|---|---|---|
+| **file-based** *(default)* | SQLite (relational) + LanceDB (vector) + Ladybug (graph). All file-based under `~/cognee-data/`. | git, Python 3.10–3.13, uv | Single-user local dev. Tarball one directory for backup. No Docker overhead. SQLite WAL handles 2-3 parallel Claude Code sessions with bursty writes. |
+| **postgres+docker** | PostgreSQL+pgvector via Docker (relational + vector). Ladybug for graph. | git, Python 3.10–3.13, uv, Docker | Sustained heavy parallel writes. Production-shaped local setups. |
 
-| Preset | Description | Requires |
-|--------|-------------|----------|
-| **recommended** | Local clone + PostgreSQL/PGVector via Docker | git, Python 3.10+, uv, Docker |
-| **minimal** | Local clone + file-based defaults (SQLite/LanceDB/Kuzu) | git, Python 3.10+, uv |
-| **docker** | Everything via Docker containers | Docker |
+If the user passes a preset (`file-based` or `postgres`), use it. The choice is reversible — same data model, different connection strings.
 
-If required tools are missing for the chosen preset, tell the user what's needed and offer to help install them by searching the web for current installation instructions for their detected OS/platform.
+**Embedding choice is orthogonal to storage choice** (see Step 3c). Don't bundle them.
 
-## Step 3a: Choose LLM Provider
+## Step 3a: Choose LLM provider
 
-Ask the user which LLM provider they want to use:
-- **OpenAI** (recommended) — most compatible with cognee's structured output extraction
-- **Anthropic** — set `LLM_PROVIDER=anthropic`, `LLM_MODEL` to current best Sonnet model
-- **Ollama** (local, free) — requires configuring BOTH LLM and embeddings (see Ollama section below)
+LLM and embedding providers are independent — the LLM choice does NOT configure embeddings.
 
-**Critical gotcha to communicate**: If using Ollama, both LLM and embedding config must be set. If only one is configured, the other defaults to OpenAI and fails without an OpenAI key.
+- **OpenAI** — most compatible with cognee's structured-output extraction.
+- **Anthropic** — set `LLM_PROVIDER=anthropic`, `LLM_MODEL` to the current best Sonnet model. The `anthropic` package is a cognee optional extra — not pulled in by `uv sync` alone; add it explicitly in Step 4.
+- **Ollama** (local, free) — requires configuring BOTH LLM and embeddings via Ollama (see Ollama Configuration).
 
-## Step 3b: Configure API Key
+## Step 3b: API key
 
-This is a dedicated step — do not combine it with provider selection.
+If `$LLM_API_KEY`, `$OPENAI_API_KEY`, or `$ANTHROPIC_API_KEY` is already set in the user's environment, show a masked version (first 4 + last 4 chars) and confirm. Otherwise ask for the key in a dedicated prompt.
 
-1. **Check existing environment**: Look for the key in common environment variables:
-   - `$LLM_API_KEY`, `$OPENAI_API_KEY`, `$ANTHROPIC_API_KEY` (depending on chosen provider)
-2. **If found**: Show a masked version for confirmation (first 4 + last 4 characters, e.g., `sk-p...Xk9f`). Ask the user to confirm this is the key they want to use.
-3. **If not found**: Explicitly ask the user to provide their API key. Use a dedicated prompt — do not combine this with other questions.
-4. **Persistence**: Detect the shell profile path from `$SHELL` and OS:
-   - zsh → `~/.zshrc`
-   - bash on Linux → `~/.bashrc`
-   - bash on macOS → `~/.bash_profile` (macOS login shells don't source `~/.bashrc` by default)
-   - fish → `~/.config/fish/config.fish`
+**Use the literal key value in `.mcp.json` and `.env`** — Claude Code does not expand shell variables like `${LLM_API_KEY}`. Also instruct the user to persist the key in their shell profile (`~/.zshrc`, `~/.bashrc`, `~/.bash_profile`, or fish config depending on `$SHELL`) so it's available to terminal sessions.
 
-   Instruct the user to add their API key export to the detected profile so it persists across terminal sessions.
-5. **Store the literal value**: Save the actual key value for use in `.env` and `.mcp.json` in later steps. Never use shell variable references like `${LLM_API_KEY}` in config files — Claude Code does not expand them.
+## Step 3c: Choose embedding provider
 
-## Step 4: Install & Configure
+Three options. Recommend the first. **Always set `EMBEDDING_DIMENSIONS` explicitly** — cognee falls back to 3072 (an OpenAI assumption) on registry-lookup miss, which silently corrupts ingest for non-default models.
 
-Each preset defines **goals** — achieve each goal using the tools and paths detected in Step 1, and the latest docs from Step 0. Do not use hardcoded commands from this skill file blindly; verify against current documentation.
+| Provider | Model | Dim | MTEB | Cost | Notes |
+|---|---|---|---|---|---|
+| **fastembed** *(default)* | `BAAI/bge-large-en-v1.5` | 1024 | ~64.2 | free, local | No API key, no egress. First-use downloads ~1.2GB to `~/.cache/fastembed/`. Cognee optional extra — add explicitly in Step 4. |
+| **OpenAI** | `text-embedding-3-large` | 3072 | ~64.6 | ~$0.13/1M tokens | Requires `OPENAI_API_KEY` and egress to api.openai.com. |
+| **Voyage** | `voyage-3` | 1024 | ~65.6 | free tier exists | Requires `VOYAGE_API_KEY`. Anthropic-recommended embeddings. Cognee optional extra. |
 
-### Recommended Preset
+For the chosen provider, set in `.mcp.json`'s env:
+- `EMBEDDING_PROVIDER`
+- `EMBEDDING_MODEL`
+- `EMBEDDING_DIMENSIONS` (model's real dim — verify; cognee's fallback is wrong for non-OpenAI)
+- `EMBEDDING_MAX_TOKENS` (`512` for bge-large; check provider docs otherwise)
 
-**Goal 1: Ensure uv is installed**
-If `uv` is not found, look up current installation instructions from https://docs.astral.sh/uv/getting-started/installation/ for the detected platform and install it.
+For Ollama, see Ollama Configuration.
 
-**Goal 2: Clone cognee repo**
-If not already cloned, ask the user where they want it. Suggest `~/cognee` as default. Clone from https://github.com/topoteretes/cognee.git
+## Step 3d: Data directory
 
-**Goal 3: Install cognee-mcp dependencies**
-Run `uv sync` in the `cognee-mcp` subdirectory of the clone. Check the cognee docs (Step 0) for the current recommended flags. Verify the venv Python and `server.py` exist afterward.
+Cognee defaults to writing databases inside the venv (`.venv/lib/python<ver>/site-packages/cognee/.cognee_system/databases/`) — won't survive `uv sync --reinstall`, hidden from backup tooling. Always set both:
 
-**Goal 4: Start PostgreSQL + PGVector**
-Use Docker to run a PGVector container. Before starting:
-- Check if port 5432 is already in use
-- Refer to the **Determining DB_HOST** section to choose the correct address
-- Use the **Default Database Credentials** defined below (communicate these are dev-only defaults)
+- `DATA_ROOT_DIRECTORY=<absolute path>/data` — ingested data files
+- `SYSTEM_ROOT_DIRECTORY=<absolute path>/system` — SQLite / LanceDB / graph DBs
 
-**Goal 5: Write `.env`**
-Write a `.env` file with actual literal values based on what was detected and chosen. If `.env` already exists, merge — don't overwrite unrelated config. Include:
-- LLM config (provider, model, API key — the literal value from Step 3b)
-- Database config (provider, host per **Determining DB_HOST**, port, credentials)
-- Vector DB provider
-- `ENABLE_BACKEND_ACCESS_CONTROL=false` (see Access Control Note below)
+Default suggestion: `~/cognee-data/` (with `~` expanded). Ask if the user wants this or somewhere else.
 
-**Goal 6: Write `.mcp.json`**
-Write the cognee entry to `.mcp.json` following these **mandatory rules**:
-- Use **actual literal values** — Claude Code does not expand shell variables like `${LLM_API_KEY}` or `$HOME`
-- Use **resolved absolute paths** — no `~`, `$HOME`, or relative paths (e.g., `/Users/username/cognee/...`)
-- Use the **actual API key value** from Step 3b in the `env` block
-- Use the correct `DB_HOST` per **Determining DB_HOST** — consistent with what's in `.env`
-- Include `ENABLE_BACKEND_ACCESS_CONTROL=false` in the `env` block
-- If `.mcp.json` already exists with other servers, **merge** the cognee entry — don't overwrite
+## Step 4: Install & configure
 
-**Goal 7: Add `.mcp.json` to `.gitignore`**
-If not already listed, add it. The file contains secrets and is machine-specific.
+Each backend defines goals. Achieve each using the tools and paths from Step 1 and the docs from Step 0.
 
-### Minimal Preset
+### File-based backend (SQLite + LanceDB + Ladybug)
 
-Same as Recommended Goals 1-3, then:
-- **Skip** Goal 4 (no Postgres — uses file-based SQLite/LanceDB defaults)
-- **Skip** Goal 5 (no `.env` needed — defaults are fine)
-- **Goal 6**: Write `.mcp.json` with `LLM_API_KEY` and `ENABLE_BACKEND_ACCESS_CONTROL=false` in env (same literal-value and absolute-path rules)
-- **Goal 7**: Same gitignore step
+**Goal 1: Ensure `uv` is installed.** If not present, follow current install instructions from astral.sh.
 
-**Note to communicate**: Minimal setup can hit file locking issues under heavy use. Suggest upgrading to recommended later if this happens.
+**Goal 2: Clone cognee repo.** Suggest `~/cognee` if not already cloned. Repo: `https://github.com/topoteretes/cognee.git`.
 
-### Docker Preset
+**Goal 3a: Run `uv sync` in `cognee-mcp/`.** Cognee-mcp's `pyproject.toml` declares only a Python floor; the real upper bound is set transitively by deps with narrow ABI wheels. On a "no wheel for cpXY" failure, retry with `--python <version>` picking the highest installed Python whose minor sits inside the supported ABI set.
 
-**Goal 1: Clone cognee repo** (for docker-compose files)
+**Goal 3b: Provider extras.** Run `uv add <package>` for each declared provider that's an optional cognee extra:
+- `anthropic` for `LLM_PROVIDER=anthropic`
+- `fastembed` for `EMBEDDING_PROVIDER=fastembed`
+- `voyageai` for `EMBEDDING_PROVIDER=voyage`
 
-**Goal 2: Write `.env` in the cognee repo directory**
-With LLM config, **Default Database Credentials**, and `ENABLE_BACKEND_ACCESS_CONTROL=false`. Refer to **Determining DB_HOST** — for containers in the same compose stack, `DB_HOST` should be the service name (e.g., `postgres`).
+Note: `uv add` writes to `pyproject.toml`; a future `git pull` may overwrite it. Use `/setup-cognee --refresh-setup` after any update.
 
-**Goal 3: Start the stack via docker compose**
-Detect whether `docker compose` (V2) or `docker-compose` (V1) is available. Check cognee docs for current compose profiles and flags.
+**Goal 4: Write `.mcp.json`.** Create the `mcpServers.cognee` entry (or merge if `.mcp.json` already has other servers). Create the data dirs from Step 3d if they don't exist.
 
-**Goal 4: Detect the Docker network name**
-The compose stack creates a network (typically `cognee_default`). Detect the actual name.
+- Literal values everywhere — Claude Code does not expand `${VAR}` or `$HOME`.
+- Resolved absolute paths — no `~` or relative paths.
+- The actual API key from Step 3b in the env block.
+- Env block:
+  - LLM: `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`
+  - Embedding: `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, `EMBEDDING_MAX_TOKENS`
+  - Storage: `DB_PROVIDER=sqlite`, `VECTOR_DB_PROVIDER=lancedb`, `GRAPH_DATABASE_PROVIDER=ladybug`
+  - Data dirs: `DATA_ROOT_DIRECTORY`, `SYSTEM_ROOT_DIRECTORY`
+  - Access control: `ENABLE_BACKEND_ACCESS_CONTROL=false` (see Access Control Note)
 
-**Goal 5: Write `.mcp.json`**
-Use `docker` as the command, with the detected network name. Same literal-value rules. Pass env vars via `-e` flags in args, with the API key in the `env` block. Include `ENABLE_BACKEND_ACCESS_CONTROL=false`. Refer to **Determining DB_HOST** for the correct `DB_HOST` value — the MCP container needs to reach the database, so use the address appropriate for a Docker container reaching the DB.
+**Goal 5: Generate `cognee-mcp/.env` from `.mcp.json`.** Every `KEY=VALUE` line verbatim, with this header:
 
-**Goal 6**: Same gitignore step
+```
+# GENERATED by /setup-cognee — DO NOT EDIT.
+# This file is derived from .mcp.json's `env` block to align cognee's
+# dotenv-override (cognee/__init__.py:11) with Claude Code's MCP config.
+# To change config: edit .mcp.json, then run `/setup-cognee --refresh-setup`.
+```
+
+If `cognee-mcp/.env` already exists, replace it entirely. Custom env belongs in `.mcp.json`.
+
+**Goal 6: Add `.mcp.json` to `.gitignore`.** Contains secrets, machine-specific.
+
+### Postgres+Docker backend
+
+Same as file-based, with these additions:
+
+- Before Goal 4: start PostgreSQL+pgvector via Docker. Check port 5432 isn't already in use. Address per Determining DB_HOST. Credentials per Default Database Credentials (dev-only).
+- Goal 4: env block additionally carries `DB_PROVIDER=postgres`, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `DB_PASSWORD`, and `VECTOR_DB_PROVIDER=pgvector` (replacing `lancedb`). Graph DB remains `ladybug` by default.
+- Goals 5, 6: identical to file-based.
 
 ## Access Control Note
 
-Cognee v0.5.0+ defaults to multi-user access control mode (`ENABLE_BACKEND_ACCESS_CONTROL=true`), which requires authentication tokens and user management. This causes confusing errors in single-user local development setups.
-
-This skill sets `ENABLE_BACKEND_ACCESS_CONTROL=false` by default in both `.env` and `.mcp.json` to disable access control for local development.
-
-**When to enable it**: If you're sharing a cognee instance across multiple users or deploying to a shared environment, set `ENABLE_BACKEND_ACCESS_CONTROL=true` and configure authentication. See the Expansion Path table below.
+Cognee v0.5.0+ defaults to multi-user access control (`ENABLE_BACKEND_ACCESS_CONTROL=true`), which requires auth tokens and user management. Causes confusing errors in single-user local dev. This skill sets it to `false` by default. For shared instances, see the Expansion Path.
 
 ## Step 5: Verify
 
-Run `/mcp-doctor` to confirm cognee is healthy.
+### Phase 1: Pre-flight stdio probe
 
-If it fails, troubleshoot based on the error. Common issues vary by setup type — `/mcp-doctor` will provide setup-specific diagnostics.
+Exercise the install through cognee's stdio interface end-to-end: connect, list tools (confirm `remember` / `recall` present), call `remember` with a unique probe-id, call `recall` querying for that id. **The probe-id must appear verbatim in the recall response** — that's the assertion; anything less is a partial pass.
+
+Pass through Claude Code's env explicitly (`env -i HOME=$HOME PATH=$PATH <vars from .mcp.json>`) so the child sees the same env it would see at session boot.
+
+**Schema-driven, not hardcoded.** Cognee renames tool input parameters across versions (`data` vs `information` for `remember`). Read the input schema and build the args from it.
+
+**Probe isolation only when needed.** A fresh install assumes no in-session cognee — the probe can use the user's real `DATA_ROOT_DIRECTORY` / `SYSTEM_ROOT_DIRECTORY` because they're empty and nothing holds a lock. If running `/setup-cognee` to reconfigure an already-loaded cognee, use `/setup-cognee --refresh-setup` instead — that path runs the probe against temp dirs to avoid Ladybug lock contention.
+
+**Tell the user the wait.** ~30s normally. ~100s on a fresh fastembed install (downloads ~1.2GB of embedding weights and runs an LLM extraction call). Without the heads-up the probe will feel hung.
+
+Common failure modes:
+- `[Errno 61] Connect call failed ('127.0.0.1', 5432)` — `.env` still declares Postgres; regenerate from `.mcp.json`.
+- `Embedding connection test timed out` — `EMBEDDING_PROVIDER` not set or unreachable.
+- `ModuleNotFoundError: <provider>` — provider extra not installed; re-apply from Goal 3b.
+- `Field required ... data` — schema mismatch; probe is hardcoding param names.
+
+### Phase 2: Post-restart check
+
+After the user restarts Claude Code, run `/mcp-doctor` to confirm cognee tools surface in-session. If absent after a clean restart, run `/mcp-doctor --deep` for the startup error.
 
 ## Step 6: Report
-
-Summarize what was configured:
 
 ```
 Cognee Setup Complete
 =====================
-Preset:       recommended / minimal / docker
-Database:     PostgreSQL+PGVector / SQLite+LanceDB (file-based)
-Graph:        Kuzu (embedded)
-LLM:          OpenAI / Anthropic / Ollama
-API key:      configured / missing
-Clone:        /path/to/cognee
-.mcp.json:    updated
-.env:         created / updated / not needed
-.gitignore:   .mcp.json entry present
-Access ctrl:  disabled (single-user default)
-Health check: passed / failed
+Backend:           file-based / postgres+docker
+LLM:               <provider>/<model>
+Embedding:         <provider>/<model> (<dim>-dim)
+Data dir:          <DATA_ROOT_DIRECTORY>
+Clone:             <path>
+.mcp.json:         updated
+.env:              generated from .mcp.json
+.gitignore:        .mcp.json entry present
+Access control:    disabled (single-user default)
+Pre-flight probe:  passed (remember+recall round-trip with probe-id <id>)
 
 Next steps:
-- Run /hello to start your first session
-- Run /mcp-doctor anytime to check connectivity
+- Restart Claude Code so the cognee MCP server loads in-session
+- Run /mcp-doctor to confirm cognee tools surface
+- Run /hello to start a session
+
+Notes:
+- First `remember` call takes ~10-30s (cognee extracts a knowledge graph via the LLM).
+  Subsequent calls amortise.
+- If fastembed: first call also downloads ~1.2GB to ~/.cache/fastembed/.
+- To change config: edit .mcp.json, then /setup-cognee --refresh-setup.
 ```
 
 ## Ollama Configuration
 
-If the user chose Ollama as their LLM provider, these environment variables must ALL be set (in both `.env` and `.mcp.json` env block):
+If the user chose Ollama, set BOTH LLM and embedding env vars to Ollama. If only one is set, the other defaults to OpenAI and fails without an OpenAI key.
 
-| Variable | Purpose | Example value |
-|----------|---------|---------------|
-| `LLM_PROVIDER` | LLM backend | `ollama` |
-| `LLM_MODEL` | Chat model | `llama3.1:8b` |
-| `LLM_ENDPOINT` | Ollama API | `http://localhost:11434/v1` |
-| `LLM_API_KEY` | Placeholder | `ollama` |
-| `EMBEDDING_PROVIDER` | Embedding backend | `ollama` |
-| `EMBEDDING_MODEL` | Embedding model | `nomic-embed-text:latest` |
-| `EMBEDDING_ENDPOINT` | Embedding API | `http://localhost:11434/api/embed` |
-**Critical**: All embedding variables must be set. If only LLM is configured for Ollama, embeddings default to OpenAI and fail without an OpenAI key.
+| Variable | Example value |
+|---|---|
+| `LLM_PROVIDER` | `ollama` |
+| `LLM_MODEL` | `llama3.1:8b` |
+| `LLM_ENDPOINT` | `http://localhost:11434/v1` |
+| `LLM_API_KEY` | `ollama` (placeholder) |
+| `EMBEDDING_PROVIDER` | `ollama` |
+| `EMBEDDING_MODEL` | `nomic-embed-text:latest` |
+| `EMBEDDING_ENDPOINT` | `http://localhost:11434/api/embed` |
+| `EMBEDDING_DIMENSIONS` | check the model's docs — `nomic-embed-text` is 768 |
 
-**Tokenizer**: If the chosen embedding model requires a HuggingFace tokenizer (e.g., nomic-embed-text needs `HUGGINGFACE_TOKENIZER`), look up the correct tokenizer name for the specific model version the user selected. Do not assume a fixed value — check the model's documentation.
+If the embedding model requires a HuggingFace tokenizer (e.g., `nomic-embed-text` needs `HUGGINGFACE_TOKENIZER`), look up the right one for the chosen model version.
 
-The user also needs Ollama installed and the models pulled. Search the web for current Ollama installation instructions for their platform if needed.
+User also needs Ollama installed and models pulled.
 
 ## Expansion Path
 
-After initial setup, these upgrades are config-only changes:
+Config-only changes (edit `.mcp.json`, then `/setup-cognee --refresh-setup`):
 
 | Need | Change |
-|------|--------|
+|---|---|
 | More LLM throughput | Add `LLM_RATE_LIMIT_ENABLED=true`, `LLM_RATE_LIMIT_REQUESTS=60` |
 | Multiple agents sharing memory | Switch cognee-mcp to HTTP transport, point all agents at one instance |
 | Remote/shared graph DB | Add Neo4j via docker compose, set `GRAPH_DATABASE_PROVIDER=neo4j` |
-| Team usage with permissions | Set `ENABLE_BACKEND_ACCESS_CONTROL=true` (disabled by default for local dev — see Access Control Note) |
+| Team usage with permissions | Set `ENABLE_BACKEND_ACCESS_CONTROL=true` |
 | Cloud storage | Set `STORAGE_BACKEND=s3` + AWS credentials |
 | Caching layer | Add Redis via docker compose |
-| Better model | Change `LLM_MODEL` to a higher-tier model |
+| Better model | Change `LLM_MODEL` |
+| File-based → Postgres | Change `DB_PROVIDER`, `VECTOR_DB_PROVIDER`, add `DB_*` vars; start the Postgres container |
 
 ## Advanced: HTTP/SSE Transport (Shared Instance)
 
-For multi-agent setups or remote access, cognee-mcp can run as an HTTP server instead of stdio. This allows multiple Claude Code instances to share one knowledge graph.
+For multi-agent setups or remote access, cognee-mcp can run as an HTTP server instead of stdio. Multiple Claude Code instances can then share one knowledge graph.
 
-When configured this way, `.mcp.json` uses a `url` field instead of `command`/`args`:
+`.mcp.json` uses `url` instead of `command`/`args`:
 ```
 "cognee": { "url": "http://<host>:<port>/mcp" }
 ```
 
-Use the actual host and port the cognee-mcp HTTP server binds to — check the cognee-mcp docs for current flags to start the server in HTTP mode and which port it defaults to.
+The `.env`-as-derived-artifact pattern doesn't apply in HTTP mode — the cognee process is shared and runs separately. The cognee process's env is managed wherever it's hosted.
+
+Check current cognee-mcp docs for the flags to start the server in HTTP mode.
