@@ -244,6 +244,42 @@ def build_starter_plan(workspace: Path, source: Path) -> dict:
     }
 
 
+CLAUDE_MD_MEMORY_INCLUDE = "@.claude/memory/MEMORY.md"
+
+
+def claude_md_missing_memory_include(workspace: Path) -> list[Path]:
+    """Return CLAUDE.md paths (workspace + each registered project) that do not
+    reference `@.claude/memory/MEMORY.md`. Templates ship with this `@`-include so
+    the MEMORY.md index auto-loads at session start; existing deployed CLAUDE.md
+    files are user-evolved and never modified by sync — this surfaces drift as
+    an advisory hint only.
+    """
+    missing: list[Path] = []
+    candidates = [workspace / "CLAUDE.md"]
+    for slug in registered_project_slugs(workspace):
+        candidates.append(workspace / "projects" / slug / "CLAUDE.md")
+    for cm in candidates:
+        if not cm.is_file():
+            continue
+        try:
+            if CLAUDE_MD_MEMORY_INCLUDE not in cm.read_text():
+                missing.append(cm)
+        except OSError:
+            continue
+    return missing
+
+
+def print_claude_md_memory_advisory(missing: list[Path]) -> None:
+    if not missing:
+        return
+    print()
+    print("Hint: the following CLAUDE.md file(s) do not @-include their MEMORY.md.")
+    print(f"Add a line `{CLAUDE_MD_MEMORY_INCLUDE}` to auto-load the memory index")
+    print("at session start (template addition). Sync does not modify CLAUDE.md.")
+    for cm in missing:
+        print(f"  · {cm}")
+
+
 def print_plan(workspace: Path, source: Path, plan: dict, starter_plan: dict) -> None:
     print()
     print("=== sync plan ===")
@@ -354,8 +390,11 @@ def main() -> None:
     plan = build_plan(workspace, source)
     starter_plan = build_starter_plan(workspace, source)
 
+    missing_includes = claude_md_missing_memory_include(workspace)
+
     if not args.apply and not args.apply_all:
         print_plan(workspace, source, plan, starter_plan)
+        print_claude_md_memory_advisory(missing_includes)
         return
 
     if args.apply_all:
@@ -384,6 +423,7 @@ def main() -> None:
         print("line, copy the matching bullet from the boilerplate's MEMORY.md:")
         for display in feedback_hints:
             print(f"  · {display}")
+    print_claude_md_memory_advisory(missing_includes)
     print()
 
 

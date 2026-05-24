@@ -154,6 +154,18 @@ Working state and skill outputs sit at the **project root** (gitignored). Commit
 **Markdown** is the primary store — always available, fast, deterministic.
 **Cognee** is the optional enrichment layer — semantic search across accumulated knowledge. Skills degrade gracefully if unavailable.
 
+### How memory loads
+
+Claude Code reads memory in two passes at session start:
+
+1. **CLAUDE.md ancestor walk.** Every `CLAUDE.md` from cwd up to the filesystem root is loaded in full. `@<path>` imports inside any of those files expand recursively (up to 5 hops).
+
+2. **Auto-memory.** The harness's own MEMORY.md at `~/.claude/projects/<slug>/memory/MEMORY.md` is loaded as text (first 200 lines or 25 KB, whichever is smaller). Topic files referenced inside it are NOT auto-loaded — Claude reads them on demand when relevant. See [Anthropic's memory docs](https://code.claude.com/docs/en/memory) for the full mechanism.
+
+Workspace and project memory follow the same pattern as the harness: the workspace `CLAUDE.md` `@`-includes `<workspace>/.claude/memory/MEMORY.md`; each project's `CLAUDE.md` does the same at project scope. The index loads at session start; topic files referenced inside (`feedback_*.md`, `convention_*.md`, etc.) are read on demand. Engineers entering a project repo directly — without setting up the workspace — still get the project's curated memory index loaded automatically via the project's `CLAUDE.md` `@`-include.
+
+The boilerplate never redirects, wraps, or overrides the harness auto-memory. Two parallel layers: the harness carries per-user notes the harness writes; workspace and project memory carry curated patterns written by `/bye`. See [Optional: Auto-Memory System](#optional-auto-memory-system) below for the auto-memory layer's curation discipline and the `setup-auto-memory` skill that wires it in.
+
 ### Team & leadership features
 
 For engineering managers, directors, and VPs — driven by `<workspace>/me/identity.md` (role) and `<workspace>/me/team.md` (direct reports):
@@ -163,6 +175,8 @@ For engineering managers, directors, and VPs — driven by `<workspace>/me/ident
 - **`/collect-my-activity`** — works for any role, collects your own activity across all sources
 
 ## Optional: Auto-Memory System
+
+For how the auto-memory layer loads alongside workspace and project memory, see [How memory loads](#how-memory-loads) above. This section covers the curation discipline and the `setup-auto-memory` skill that wires the opt-in package in.
 
 This boilerplate also ships an opt-in **auto-memory** package at `auto-memory/`. It complements the project-scope memory above with a user-scope, typed-atomic-file system that lives under `~/.claude/projects/<slug>/memory/` — the directory Claude Code's harness already manages per project.
 

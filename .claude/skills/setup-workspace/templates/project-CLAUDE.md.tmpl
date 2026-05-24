@@ -21,6 +21,13 @@ the workspace is ready.
 
 Per-engineer state at the project root (`workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/`) is gitignored.
 
+<!-- The @-include below auto-loads this project's MEMORY.md index at session start
+     when an engineer enters the repo directly (without the boilerplate's /hello).
+     Topic files it references are NOT auto-loaded — Claude reads them on demand
+     when relevant, matching the harness auto-memory pattern documented at
+     https://code.claude.com/docs/en/memory#auto-memory. -->
+@.claude/memory/MEMORY.md
+
 ### Artifacts naming
 
 Any output produced by a skill or session — feedback files, generated documents, collected data, derived artefacts — lands under this project's `artifacts/` directory, never co-located with `workstreams/` or `sessions/`.

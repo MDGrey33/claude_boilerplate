@@ -12,6 +12,13 @@ This workspace uses a layered memory system. Optionally, it integrates with **co
 | Per-project knowledge | `<workspace>/projects/<slug>/.claude/memory/` | `/bye`, committed for repos |
 | Identity | `<workspace>/me/{identity,brag-log,growth,team}.md` | `/setup-workspace`, `/bye` |
 
+<!-- The @-include below auto-loads the workspace MEMORY.md index at session start.
+     Topic files it references (feedback_*.md, convention_*.md, etc.) are NOT
+     auto-loaded — Claude reads them on demand when relevant to the current work,
+     matching the harness auto-memory pattern documented at
+     https://code.claude.com/docs/en/memory#auto-memory. -->
+@.claude/memory/MEMORY.md
+
 ## Layout
 
 ```
