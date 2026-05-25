@@ -358,12 +358,18 @@ def apply_paths(
         if path in synced_eligible:
             src = source / path
             dst = workspace / path
+            if dst.is_symlink():
+                skipped.append(f"{path} (refused: dst is a symlink to {dst.resolve()}; remove the symlink and re-run)")
+                continue
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
             applied.append(path)
         elif path in starter_eligible:
             src = starter_plan["sources"][path]
             dst = starter_plan["dests"][path]
+            if dst.is_symlink():
+                skipped.append(f"{path} (refused: dst is a symlink to {dst.resolve()}; remove the symlink and re-run)")
+                continue
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
             applied.append(path)

@@ -183,15 +183,24 @@ def deploy_dir(src: Path, dst: Path, overwrite: bool, created: list, skipped: li
     if not src.is_dir():
         skipped.append(f"{label} (source missing)")
         return
+    if dst.is_symlink():
+        skipped.append(
+            f"{label} (refused: {dst} is a symlink to {dst.resolve()}; "
+            f"the boilerplate manages this directory directly — remove the symlink and re-run)"
+        )
+        return
     if not is_dry_run():
         dst.mkdir(parents=True, exist_ok=True)
     for entry in src.iterdir():
         target = dst / entry.name
-        if target.exists() and not overwrite:
+        target_present = target.exists() or target.is_symlink()
+        if target_present and not overwrite:
             skipped.append(f"{label}/{entry.name} (exists)")
             continue
         if not is_dry_run():
-            if target.exists():
+            if target.is_symlink():
+                target.unlink()
+            elif target.exists():
                 if target.is_dir():
                     shutil.rmtree(target)
                 else:
@@ -208,6 +217,12 @@ def deploy_agent_guardrails(source: Path, created: list, skipped: list) -> None:
     dst = workspace() / ".claude/docs/agent-guardrails.md"
     if not src.is_file():
         skipped.append("docs/agent-guardrails.md (source missing)")
+        return
+    if dst.is_symlink():
+        skipped.append(
+            f"docs/agent-guardrails.md (refused: dst is a symlink to {dst.resolve()}; "
+            f"remove the symlink and re-run)"
+        )
         return
     if not is_dry_run():
         dst.parent.mkdir(parents=True, exist_ok=True)
