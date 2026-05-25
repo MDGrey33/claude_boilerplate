@@ -21,7 +21,7 @@ You are wrapping up the current working session. Summarize, persist, and hand of
    - Scan `<scope>/sessions/active/*-<workstream-slug>-*.md` (workstream-local only — no cross-scope scan, no cross-workstream scan).
    - 1 match → take it.
    - >1 matches → list each with age + open item summary; ask user to pick.
-   - 0 matches → ask user which scope + workstream to write to. Proceed without a marker; step 3 will write narrative directly to a fresh file in `<scope>/sessions/`, and step 4 will skip the move and run the prune only.
+   - 0 matches → ask user which scope + workstream to write to. Proceed without a marker; step 3 will write narrative directly to a fresh file in `<scope>/sessions/`, and step 4 is skipped entirely.
 
 
 2. **Summarize the session**: Review the conversation and identify:
@@ -56,13 +56,13 @@ You are wrapping up the current working session. Summarize, persist, and hand of
    - [issues encountered and how they were fixed]
    ```
 
-   **0-match case** (no marker was selected at step 1): write the narrative directly to a fresh file at `<scope>/sessions/<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md` instead — matches the filename format `/hello` step 14 uses. Skip step 4's move (the file is already at its final location); still run the prune.
+   **0-match case** (no marker was selected at step 1): write the narrative directly to a fresh file at `<scope>/sessions/<YYYY-MM-DD>-<workstream-slug>-<HHMMSS>-<6hex>.md` instead — matches the filename format `/hello` step 14 uses. Skip step 4 entirely (the file is already at its final location).
 
-4. **Promote the session marker** (critical state transition — must run immediately after step 3): Move `<scope>/sessions/active/<filename>` → `<scope>/sessions/<filename>` (directory move only — filename unchanged). Then prune: keep the last 10 files matching `*-<workstream-slug>-*.md` in `<scope>/sessions/` (sorted by filename descending), delete older ones.
+4. **Promote the session marker** (critical state transition — must run immediately after step 3): Move `<scope>/sessions/active/<filename>` → `<scope>/sessions/<filename>` (directory move only — filename unchanged). Sessions accumulate in `<scope>/sessions/` indefinitely by design — the workstream file is the system of record (status, decisions, open items, all promoted by step 5); session files are the per-session journal, kept for archaeology and not pruned automatically.
 
    This step runs early — immediately after the narrative is written — so that failures in later steps (workstream update, lessons, MEMORY, cognee) do not leave an orphan marker in `active/`. The only orphan window is the fs operation between step 3's write and step 4's move; if `/bye` fails inside that window, the orphan retains its full narrative and is recoverable.
 
-   Skip case: 0-match — step 3 wrote the file directly to `<scope>/sessions/`; run the prune only. (The user-abort branch at step 2 never reaches this step, so there's no other skip case.)
+   Skip case: 0-match — step 3 wrote the file directly to `<scope>/sessions/`; nothing to promote. (The user-abort branch at step 2 never reaches this step, so there's no other skip case.)
 
 5. **Update active workstream**: Edit `<scope>/workstreams/<workstream_slug>.md` in place — surgical edits, not full rewrite. Use mtime-check. Status line → today's date + one-line current state. Open Items → mark closed `[x]` (with user confirmation), append new `[ ]`. Decisions → append today's with `[YYYY-MM-DD]` prefix. Long-form artifacts (drafts, comparison docs, design specs over ~15 lines) go to `<scope>/artifacts/<workstream_slug>/<filename>.md`; the workstream gets a one-line pointer.
 

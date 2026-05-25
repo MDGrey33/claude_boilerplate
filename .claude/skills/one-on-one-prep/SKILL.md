@@ -9,6 +9,10 @@ args: "Member name and optional time range. Examples: 'Alice Chen', 'Alice Chen 
 
 Synthesize a team member's recent activity from daily activity files into a structured meeting prep document. This is a **synthesis skill** — it reads raw data collected by `/collect-team-activity`, it does not collect data itself.
 
+## Privacy posture
+
+Input files under `<workspace>/collected/` may contain private Slack channel content, internal Jira tickets, and other non-public material gathered by `/collect-team-activity`. The synthesised prep document this skill produces lands on the caller's local disk under `<workspace>/artifacts/one-on-one-prep/`. Intended for the caller's own 1:1 preparation with their direct reports — do not generate prep for members outside your direct report scope, and treat the output as confidential.
+
 ## Steps
 
 **Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/one-on-one-prep/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below (identity, team, activity input, output). Abort with a setup-broken error if validation fails.
@@ -162,7 +166,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
 
 ## Important Rules
 
-- **Synthesis only.** This skill reads from `activity/` files. It never queries Slack, Jira, or any other data source directly.
+- **Synthesis only.** This skill reads from `collected/` files. It never queries Slack, Jira, or any other data source directly.
 - **Descriptive, not prescriptive.** Surface patterns; the manager decides actions. No "raise a ticket", "loop in X", "rotate first" — the skill lacks the surrounding context to make those judgements.
 - **Every claim needs a source link.** Inherited from the activity files. If an activity item has no link, flag it as unverified.
 - **Don't fabricate observations.** Every Pattern & Observation must be supported by evidence in the activity files. No activity for a day is not a pattern — it might just mean the daily collection wasn't run.

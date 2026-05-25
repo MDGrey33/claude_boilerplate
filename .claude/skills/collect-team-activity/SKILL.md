@@ -1,13 +1,17 @@
 ---
 name: collect-team-activity
-description: Collect a team member's daily work activity from public Slack, Jira, Confluence, and GitHub
+description: Collect a team member's daily work activity from Slack, Jira, Confluence, and GitHub
 user_invocable: true
 args: "Pick a scope based on user intent — orchestrator builds the (member × date) pair list from these shapes: no args = all members today; '<name>' = specific member today; '<date>' = all members on that date; '<date range>' (e.g., '2026-04-07 to 2026-04-11') = all members across that range; '<name> <date>' or '<name> <date range>' = specific member, scoped date(s). Match member name loosely against team.md (first name, full name, case-insensitive)."
 ---
 
 # Collect Team Activity
 
-Collect work activity for one or all team members for one or more days from public data sources. Designed for engineering leadership (EM, director, VP). Multi-pair scopes fan out to sub-agents — one sub-agent per (member, day) pair — for context isolation and parallelism.
+Collect work activity for one or all team members for one or more days from Slack, Jira, Confluence, and GitHub. Designed for engineering leadership (EM, director, VP). Multi-pair scopes fan out to sub-agents — one sub-agent per (member, day) pair — for context isolation and parallelism.
+
+## Privacy posture
+
+This skill reads from **private Slack channels** visible to the caller's Slack token (engineering, leadership, project channels) — not just public channels. Jira and Confluence access is bounded by the caller's Atlassian permissions; GitHub access uses the caller's gh identity (see "GitHub" section in the Executor Contract). Collected data lands on the caller's local disk under `<workspace>/collected/collect-team-activity/`. Intended for leadership oversight and 1:1 preparation with direct reports — do not run on members outside your direct report scope, and treat the output as confidential.
 
 ## Architecture
 

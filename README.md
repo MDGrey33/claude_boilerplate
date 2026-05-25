@@ -170,7 +170,7 @@ The boilerplate never redirects, wraps, or overrides the harness auto-memory. Tw
 
 For engineering managers, directors, and VPs — driven by `<workspace>/me/identity.md` (role) and `<workspace>/me/team.md` (direct reports):
 
-- **`/collect-team-activity`** — collects a team member's daily activity from public Slack, Jira, Confluence, GitHub
+- **`/collect-team-activity`** — collects a team member's daily activity from Slack (public and private channels the caller can see), Jira, Confluence, GitHub
 - **`/one-on-one-prep`** — synthesizes collected activity into a structured 1:1 meeting agenda
 - **`/collect-my-activity`** — works for any role, collects your own activity across all sources
 
