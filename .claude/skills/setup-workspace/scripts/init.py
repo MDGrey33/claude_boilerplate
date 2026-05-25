@@ -23,9 +23,18 @@ templates) is preserved if already present.
 Use --dry-run to preview without writing anything.
 """
 
+from __future__ import annotations
+
+import sys
+
+if sys.version_info < (3, 10):
+    sys.exit(
+        f"Python 3.10+ required (detected {sys.version_info.major}.{sys.version_info.minor}). "
+        "Install a newer Python via brew, uv, or pyenv."
+    )
+
 import argparse
 import shutil
-import sys
 from pathlib import Path
 
 WORKSPACE_TEMPLATE_REL = ".claude/skills/setup-workspace/templates/workspace-CLAUDE.md.tmpl"

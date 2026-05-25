@@ -36,11 +36,20 @@ identity, workstreams, sessions, settings.json, project-context.md, or other
 these categories, but never overwrites.
 """
 
+from __future__ import annotations
+
+import sys
+
+if sys.version_info < (3, 10):
+    sys.exit(
+        f"Python 3.10+ required (detected {sys.version_info.major}.{sys.version_info.minor}). "
+        "Install a newer Python via brew, uv, or pyenv."
+    )
+
 import argparse
 import filecmp
 import json
 import shutil
-import sys
 from pathlib import Path
 
 from _starter_maps import PROJECT_STARTERS, WORKSPACE_STARTERS

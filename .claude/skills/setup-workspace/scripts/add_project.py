@@ -19,11 +19,20 @@ slug is already registered.
 Use --dry-run to preview without writing anything.
 """
 
+from __future__ import annotations
+
+import sys
+
+if sys.version_info < (3, 10):
+    sys.exit(
+        f"Python 3.10+ required (detected {sys.version_info.major}.{sys.version_info.minor}). "
+        "Install a newer Python via brew, uv, or pyenv."
+    )
+
 import argparse
 import json
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 SLUG_RE = re.compile(r"^[a-z][a-z0-9-]*$")
