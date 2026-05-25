@@ -40,8 +40,11 @@ from pathlib import Path
 WORKSPACE_TEMPLATE_REL = ".claude/skills/setup-workspace/templates/workspace-CLAUDE.md.tmpl"
 STARTERS_DIR_REL = ".claude/skills/setup-workspace/templates/starters/workspace"
 
-# Dirs to create at workspace root
-ROOT_DIRS = ["workstreams", "sessions/active", "artifacts", "me"]
+# Dirs to create at workspace root.
+# `projects/` is pre-created so `mkdir <workspace>/projects/<slug>` and
+# `ln -s ... <workspace>/projects/<slug>` (the documented add-project paths in
+# /hello and add_project.py) don't fail for a fresh user with no parent dir.
+ROOT_DIRS = ["workstreams", "sessions/active", "artifacts", "me", "projects"]
 # Dirs to create under .claude/
 CLAUDE_DIRS = ["memory", "skills", "agents", "docs"]
 
