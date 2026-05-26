@@ -86,6 +86,15 @@ The inclusion list is deliberately narrow. Memory entries are short and high-sig
 - **No cross-import across setups.** Pro-me (legacy) carries its own self-contained `.claude/docs/agent-guardrails.md`; it does not reach into the workspace and the workspace does not reach into it. Each self-contained setup owns its full guardrails surface (universals + any overlays).
 - **Why layering, not full duplication.** Duplicating universals into every project creates drift (`/setup-workspace sync` would have to push to N copies; manual edits in one don't propagate). Single source + traversal-based inheritance keeps universals consistent without sync ceremony, while still leaving room for project-specific additions.
 
+## Skill authoring principles
+
+1. **Write the *what*, not the *how* — let the agent figure things out.** Trust the agent on mechanics (tmp filenames, error parsing, output structure, cleanup). Numbered algorithms with exact commands age out as upstream changes and inflate every invocation's prompt for no behavioural gain.
+2. **If the skill relies on external services, don't be deterministic about them.** Never prescribe API response shapes, exact JSON structures, or service-specific failure modes — the service tells the agent what it returned. Encoding those details creates drift the moment the service changes.
+3. **Nudge on issues the agent always faces.** Non-obvious problems that cost round-trips and tokens to work out (sandbox quirks, tool corner cases, surprising semantics) belong in the skill. Insight plus minimum action, nothing more.
+4. **Exception: be deterministic about stable, mechanical work.** If a skill does the same thing every invocation against a stable surface, and a deterministic prescription removes ongoing cognitive load even for a weaker model — be deterministic.
+
+`/skills-manager` applies these principles when adding, updating, or reviewing skills, and flags conflicts between principles and current best practices for explicit resolution rather than silent override.
+
 ## Update and contribution flow
 
 - `/setup-workspace sync` pulls upstream changes for content the boilerplate genuinely owns: skills, agents, and `agent-guardrails.md`. Local edits to these are flagged at sync time; the user consents before overwrite.
