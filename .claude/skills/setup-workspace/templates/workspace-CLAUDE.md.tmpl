@@ -1,0 +1,130 @@
+# {{workspace_name}}
+
+> Workspace-level operating model. Loaded when starting a Claude session from the workspace root.
+
+## Memory & Knowledge
+
+This workspace uses a layered memory system. Optionally, it integrates with **cognee** for semantic search across the corpus.
+
+| Layer | Location | Populated by |
+|-------|----------|--------------|
+| Personal curated | `<workspace>/.claude/memory/{MEMORY,lessons-learned}.md` | `/bye` |
+| Per-project knowledge | `<workspace>/projects/<slug>/.claude/memory/` | `/bye`, committed for repos |
+| Identity | `<workspace>/me/{identity,brag-log,growth,team}.md` | `/setup-workspace`, `/bye` |
+
+<!-- The @-include below auto-loads the workspace MEMORY.md index at session start.
+     Topic files it references (feedback_*.md, convention_*.md, etc.) are NOT
+     auto-loaded — Claude reads them on demand when relevant to the current work,
+     matching the harness auto-memory pattern documented at
+     https://code.claude.com/docs/en/memory#auto-memory. -->
+@.claude/memory/MEMORY.md
+
+## Layout
+
+```
+{{workspace_path}}/
+├── CLAUDE.md                       # this file
+├── .claude/
+│   ├── skills/  agents/  docs/     # deployed by /setup-workspace
+│   ├── memory/                     # workspace MEMORY/lessons
+│   ├── settings.json
+│   └── projects-index.json         # project registry
+├── workstreams/                    # open-item ledgers per workstream (gitignored)
+├── sessions/active/                # advisory markers (gitignored)
+├── collected/                      # skill data (gitignored)
+├── artifacts/                      # skill / workstream outputs (gitignored)
+├── contributions/                  # staged contributions (gitignored)
+├── me/                             # identity, brag log, growth, team
+├── source/                         # boilerplate source repos
+└── projects/                       # registered projects (gitignored)
+```
+
+### Artifacts naming
+
+Any output produced by a skill or session — feedback files, generated documents, collected data, derived artefacts — lands under an `artifacts/` directory, never co-located with `workstreams/` or `sessions/`. Artefacts mirror their scope, exactly like workstreams, sessions, and memory: workspace-scoped artefacts at the workspace root, project-scoped artefacts under the project.
+
+| Output type | Path pattern |
+|-------------|--------------|
+| Skill output, workspace scope | `artifacts/<skill-slug>/<filename>` (e.g., `artifacts/one-on-one-prep/2026-05-11-jane.md`) |
+| Skill output, project scope | `projects/<project-slug>/artifacts/<skill-slug>/<filename>` |
+| Workstream artefact, workspace scope | `artifacts/<workstream-slug>/<filename>` |
+| Workstream artefact, project scope | `projects/<project-slug>/artifacts/<workstream-slug>/<filename>` |
+
+Separation of concerns: `workstreams/` files are open-item ledgers that `/bye` writes into; mixing observational output pollutes that lifecycle. Resolve scope from the session marker, never from cwd.
+
+## Agent Behavior
+
+@.claude/docs/agent-guardrails.md
+
+## Prerequisites
+
+Run `/setup-cognee` for cognee semantic-memory installation. It detects your environment and walks you through the setup.
+
+## Available Skills
+
+| Skill | Purpose |
+|-------|---------|
+| `/setup-workspace` | Initialise the workspace; sync upstream changes; add projects |
+| `/project-registry` | Manage the project registry (add/remove/update/list) |
+| `/hello` | Start a new session — loads context, checks MCP health, recaps last session |
+| `/bye` | End the session — summarize work, capture lessons, persist memory |
+| `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
+| `/skills-manager` | Manage skills — add, update, remove, and review (auto-invoked by `/lessons`, or use manually) |
+| `/mcp-doctor` | Check health of configured MCP servers (session mode by default; `--deep` for process-level diagnosis) |
+| `/collect-my-activity` | Collect user's daily activity from Slack, Jira, Confluence, GitHub, Drive |
+| `/collect-team-activity` | Collect a team member's daily activity (leadership roles) |
+| `/one-on-one-prep` | Synthesize a member's activity into 1:1 meeting prep |
+| `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
+| `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
+| `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
+| `/setup-cognee` | Install and configure cognee-mcp on this machine |
+| `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
+| `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
+| `/setup-nemoclaw` | Install and configure NVIDIA NemoClaw (secure agent runtime) |
+| `/sanitizer` | Scrub a file/dir/glob for secrets, PII, private context, and tone risks before publishing. Auto-invoked by `/contribute` and `/pull-contributions`. Has a `--check` mode for pre-commit/CI gates. |
+| `/finance-controller` | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Produces a prioritized report; delegates execution to `skills-manager` or asks for approval. Use weekly or when sessions feel slow. |
+| `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |
+| `/deep-research-orchestrator` | Run a 9-stage deep research pipeline — breadth, depth, synthesis, gap-fill, contradiction detection, theory, fact-check; tiered output with credibility tagging |
+
+### Skill chains (automatic)
+- `/hello` → `/mcp-doctor` (session mode: enumerates loaded tools, no process spawning)
+- `/bye` → `/lessons` → `/skills-manager`
+- `/setup-cognee` → `/mcp-doctor`
+- `/setup-playwright-mcp` → `/mcp-doctor`
+- `/contribute` → `/sanitizer` (blocks staging on any finding)
+- `/pull-contributions` → `/sanitizer --check` (blocks pull on any finding)
+
+## Skills Governance
+
+Skills in `.claude/skills/` are **deployed copies** — maintained in the boilerplate source, not in service repos. Do not edit them here directly.
+
+To propose a skill improvement:
+1. Use `/contribute` to generalise the lesson and stage it in `contributions/`
+2. The boilerplate maintainer runs `/pull-contributions` to apply it
+3. Changes land via GitHub PR and maintainer review
+
+`/skills-manager` identifies improvement opportunities during sessions and guides you through step 1.
+
+## Workflow
+
+1. **Setup** (once per machine): `/setup-workspace init` from this workspace dir. Optional: `/setup-cognee` for semantic search.
+2. **Start**: `/hello` at the start of each session.
+3. **Work**: pick an existing project, work at workspace level on a random task, or describe a new project — the picker handles inline registration.
+4. **End**: `/bye` captures lessons, appends to brag log if warranted, and clears the session marker.
+5. **Sync** (periodic): `/setup-workspace sync` pulls upstream skill/agent updates.
+
+## Conventions
+
+<!-- Workspace-wide conventions you want loaded every session -->
+- Language:
+- Framework:
+- Test runner:
+- Formatting:
+
+## Detailed Docs
+
+Refer to these files for more detail (use `@` to include them in context):
+- `.claude/docs/architecture.md` — boilerplate architecture
+- `.claude/docs/conventions.md` — code style and patterns
+- `.claude/docs/cognee-usage.md` — how to use cognee MCP tools
+- `.claude/docs/agent-guardrails.md` — agent behaviour by scope (universal / session / autonomous)

@@ -11,7 +11,13 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
 
 ## Steps
 
-1. **Understand the trigger**: Review the lessons or requests passed as input. If invoked manually, ask the user what they'd like to do — add a new skill, update an existing one, remove one, or review for improvements.
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/skills-manager/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Abort with a setup-broken error if validation fails.
+
+1. **Understand the trigger and load lessons context**: Review the lessons or requests passed as input. Derive the active project slug from the session marker (scan `<workspace>/sessions/active/*.md` and `<workspace>/projects/*/sessions/active/*.md`; use `project_slug` from frontmatter — skip project-scope read if no marker exists or `project_slug` is `workspace`). Then read the following files (skip silently if missing):
+   - `<workspace>/projects/<slug>/.claude/memory/lessons-learned.md` (project scope, when a project marker is active)
+   - `<workspace>/.claude/memory/lessons-learned.md` (workspace scope)
+
+   Scan all entries for recurring mentions of the same skill, bug patterns, or convention violations that span multiple sessions. These inform step 2 even when not explicitly passed as args. If invoked manually with no args, use the lessons as the starting point for proposing improvements rather than asking the user what to do.
 
 2. **Assess what's needed**: Determine the appropriate action:
 
@@ -37,6 +43,8 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
    - Community conventions for the topic
    - Relevant knowledge from similar shared skills
 
+   Also load the **skill authoring principles** from `docs/v2-design-principles.md` (write the *what* not the *how*; agentic-first for external services; nudge on known agent friction; deterministic prescription only for stable mechanical work). If an up-to-date best practice conflicts with a principle, **flag the conflict explicitly in the proposal** — do not silently pick one. The user decides whether to update the principle (best practice has moved on) or apply the principle and override the best practice for this skill (principle still holds).
+
 4. **Read current skills**: Read the relevant skill files from `.claude/skills/*/SKILL.md` to understand current behavior.
 
 5. **Propose changes**: Present specific, concrete changes with:
@@ -46,6 +54,7 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
    - Expected improvement
    - Make sure the changes dont overlap or contradict other services, all skills should work together as a system
    - Identify if additional files need to be updated including but not limited to claude.md and README if relevant
+   - Honours the four skill authoring principles (`docs/v2-design-principles.md` → "Skill authoring principles"). If a researched best practice conflicts with a principle, the proposal must surface the conflict and recommend a resolution — never silently choose.
 
    If no changes are warranted, say so and explain why.
 

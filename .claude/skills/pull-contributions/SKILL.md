@@ -2,7 +2,7 @@
 name: pull-contributions
 description: Pull generalized contributions from a project into the boilerplate. Runs `sanitizer --check` as a mandatory gate before integration.
 user_invocable: true
-args: Path to a project's .claude/contributions/ folder
+args: Path to a workspace's contributions/ folder (e.g., <workspace>/contributions/)
 ---
 
 ## Model Selection
@@ -19,7 +19,7 @@ You are integrating generalized contributions from a project into this boilerpla
 
 ## Steps
 
-1. **Locate contributions**: The user provides a path to a project's `.claude/contributions/` folder (e.g., `~/code/my-project/.claude/contributions/`). Read all `.md` files in that folder **that do not start with `integrated-`**. Files with the `integrated-` prefix have already been processed — skip them silently.
+1. **Locate contributions**: The user provides the path to `<workspace>/contributions/` (e.g., `~/workspace/contributions/`). Read all `.md` files in that folder **that do not start with `integrated-`**. Files with the `integrated-` prefix have already been processed — skip them silently.
 
    If no path is provided, ask the user for it.
 

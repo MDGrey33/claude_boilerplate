@@ -9,19 +9,25 @@ args: "Member name and optional time range. Examples: 'Alice Chen', 'Alice Chen 
 
 Synthesize a team member's recent activity from daily activity files into a structured meeting prep document. This is a **synthesis skill** — it reads raw data collected by `/collect-team-activity`, it does not collect data itself.
 
+## Privacy posture
+
+Input files under `<workspace>/collected/` may contain private Slack channel content, internal Jira tickets, and other non-public material gathered by `/collect-team-activity`. The synthesised prep document this skill produces lands on the caller's local disk under `<workspace>/artifacts/one-on-one-prep/`. Intended for the caller's own 1:1 preparation with their direct reports — do not generate prep for members outside your direct report scope, and treat the output as confidential.
+
 ## Steps
 
-1. **Role guard**: Read `~/.claude/me/identity.md` and check the user's title/role.
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/one-on-one-prep/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below (identity, team, activity input, output). Abort with a setup-broken error if validation fails.
+
+1. **Role guard**: Read `<workspace>/me/identity.md` and check the user's title/role.
    - If the role is clearly IC-equivalent with no reports, **stop**:
      ```
      This skill is for leadership roles with direct reports.
      ```
    - If ambiguous, proceed.
 
-2. **Load team roster**: Read `~/.claude/me/team.md`.
+2. **Load team roster**: Read `<workspace>/me/team.md`.
    - If missing, **stop** with guidance:
      ```
-     No team roster found at ~/.claude/me/team.md
+     No team roster found at <workspace>/me/team.md
      Create one with your direct reports and their platform IDs.
      ```
    - Match the member name loosely (first name, full name, case-insensitive). If no match, list available names and ask.
@@ -31,13 +37,12 @@ Synthesize a team member's recent activity from daily activity files into a stru
      - **If missing and interactive (user is at the keyboard)** → prompt: `"No level set for {Member Name} in team.md. What level are they? (e.g., L4)"`. After user responds, write the level back to team.md (fill-missing-only — never overwrite an existing value). Continue.
      - **If missing and non-interactive (agent-driven)** → invoke `/log` with `status=WARNING detail=Level missing for {member-slug} in team.md — synthesis ran without level calibration`. Continue without the level-context block.
 
-3. **Load writing style**: Read the Writing Style section from `~/.claude/me/identity.md`. Apply it to all output. If no style is defined, default to clear and concise.
+3. **Load writing style**: Read the Writing Style section from `<workspace>/me/identity.md`. Apply it to all output. If no style is defined, default to clear and concise.
 
-4. **Load level expectations**: Read `.claude/docs/level-expectations.md` (project-scoped, shared reference).
-   - Extract the row matching the member's level from each section: Identity Anchor, Rating Signal, Impact, Scope, Direction, Problem Landscape, Execution & Craft, Collaboration & Communication, Growth & Citizenship, and (for managers) People Leadership.
-   - These will be surfaced in the prep header as "Level context" — calibration the manager reads alongside the observations.
-   - The local mirror is the contract — the skill does not fetch from any remote canonical (Confluence, Drive, Notion, wiki, etc.) at synthesis time. The mirror's own `Source:` header points at the canonical; manual sync when it changes.
-   - If `.claude/docs/level-expectations.md` is missing, log a `WARNING` via `/log` and continue without the level-context block.
+4. **Load level identity anchor**: Read `.claude/docs/level-expectations.md` (project-scoped, shared reference).
+   - Extract the Identity Anchor for the member's level from the `## Identity anchors` table (one line). Used in the prep header alongside a link to the full file.
+   - The local mirror is the contract — the skill does not fetch from any remote canonical at synthesis time.
+   - If the file is missing, omit the identity anchor text and link from the header; log a `WARNING` via `/log` and continue.
 
 5. **Determine time range**: Parse the arguments for a date range.
    - Explicit range (`YYYY-MM-DD to YYYY-MM-DD`): use as-is.
@@ -46,7 +51,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
    - The output is a list of every date in the range — **do not pre-filter to workdays**. If a member worked on a weekend, the activity file exists at that date, and pre-filtering would miss it.
 
 6. **Read activity files**: For each date in the range, look for:
-   - `.claude/memory/activity/collect-team-activity/<member-slug>/YYYY-MM-DD-<member-slug>-activity.md`
+   - `<workspace>/collected/collect-team-activity/<member-slug>/YYYY-MM-DD-<member-slug>-activity.md`
 
    For each file found: parse the Markdown to extract the `Status:` header, the `## Summary` text, and each `## Activity` item with its category, time, sources, and context.
 
@@ -78,8 +83,11 @@ Synthesize a team member's recent activity from daily activity files into a stru
    **In Progress / Open Items**
    - Group by project or theme
    - Each item: current state, what's next (only as visible from the data), any blockers (only as flagged in the source items)
-   - Flag items that have been in progress across multiple days without visible movement
-   - **Distinguish authorship from ownership** — when surfacing a ticket, note whether the team member is the assignee or the reporter. "Assigned to {Name}, no movement since X" is a different observation from "Filed by {member}, assigned to {someone-else}".
+   - Use the `execution` flag from the `## Jira — Owned (assignee)` section to interpret assignee tickets:
+     - `execution: status-change` — include as delivery evidence; the member drove this
+     - `execution: commented` — lighter engagement signal; include if the comment shaped the outcome
+     - `execution: none` — **awareness/planning signal only.** Do NOT surface as stalled delivery or "no movement." For leadership roles, tickets are frequently assigned for routing, awareness, or sprint-queue purposes, not for the assignee to execute personally. State the ticket is in queue if relevant; do not imply the member should have acted.
+   - **Reporter-only tickets** (`## Jira — Filed (reporter-only)` or `## Filed (reporter-only)` sections in the activity file) must NOT appear in Completed or In Progress. Surface them in a separate **Sprint Portfolio** section after Discussion Candidates — a brief table (key, summary, assignee, status). These are planning/oversight signals: the member created the work and delegated it to an IC. Delivery credit belongs on the IC's report.
 
    **Patterns & Observations**
    - Surface non-obvious patterns the data supports: stalled tickets, recurring categories, time-of-day patterns, cross-team coordination, sustained focus areas.
@@ -96,11 +104,12 @@ Synthesize a team member's recent activity from daily activity files into a stru
 8. **Formatting rules**:
    - Add the specific date to each point — activity files always carry ISO `Time:` stamps. Use the **local-date portion** (the date in the timezone offset shown), not the UTC date. For an item at `2026-04-12T01:30:00+04:00`, the date is `2026-04-12`, not `2026-04-11`.
    - **Source link text: ticket key alone** (e.g., `[PLAT-808](url)`). Weave the title into the bullet text or context line where useful. Embedding full key+title in link text bloats bullets when titles are long.
+   - **Slack permalinks: use exactly as provided in the activity file.** Thread reply permalinks include `?thread_ts=<parent_ts>&cid=<channel_id>` — never reconstruct or shorten them. A bare `p<timestamp>` URL without `?thread_ts=` will not navigate to the reply in Slack.
    - Every claim must have a source link. No exceptions.
    - Keep each bullet to 1-2 sentences max.
    - Writing tone follows `identity.md` — if not set, default to direct and clear.
 
-9. **Write the output file**: Write to `.claude/memory/reports/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md` where `<member-slug>` is the slug computed in step 2 and the dates are the start and end of the activity period. Create parent directories if missing.
+9. **Write the output file**: Write to `<workspace>/artifacts/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md` where `<member-slug>` is the slug computed in step 2 and the dates are the start and end of the activity period. Create parent directories if missing.
 
    **Re-run on the same (member, period)**: overwrite the file. Add a header line `**Re-synthesis**: previous run superseded YYYY-MM-DD HH:MM:SS` (UTC) below the title so the user can see this is not a fresh first run.
 
@@ -108,22 +117,8 @@ Synthesize a team member's recent activity from daily activity files into a stru
    # 1:1 Prep: {Member Name}
    **Generated**: YYYY-MM-DD
    **Period**: YYYY-MM-DD to YYYY-MM-DD
-   **Level**: {Level} — {Identity Anchor for this level}
+   **Level**: {Level} — {Identity Anchor} · [L&E](.claude/docs/level-expectations.md)
    **Activity data**: {X}/{Y} dates covered ({list missing dates, if any})
-
-   ## Level context
-   _Calibration reference for {Level}, from `.claude/docs/level-expectations.md`. Read alongside the observations below._
-
-   - **Identity Anchor**: {full sentence}
-   - **Rating Signal**: {full sentence}
-   - **Impact**: {description for this level}
-   - **Scope**: {description for this level}
-   - **Direction**: {description for this level}
-   - **Problem Landscape**: {description for this level}
-   - **Execution & Craft**: {description for this level}
-   - **Collaboration & Communication**: {description for this level}
-   - **Growth & Citizenship**: {description for this level}
-   - **People Leadership** (managers only): {description for this level}
 
    ## Completed Tasks & Achievements
 
@@ -151,7 +146,7 @@ Synthesize a team member's recent activity from daily activity files into a stru
    3. {Third}
    ```
 
-   If the level-context block can't be populated (no `Level:` for the member, or `.claude/docs/level-expectations.md` missing), omit the block entirely — the rest of the prep stays useful.
+   If `Level:` is missing for the member or `.claude/docs/level-expectations.md` is not found, omit the identity anchor and link from the header — the rest of the prep stays useful.
 
 10. **Report to user** (skip if invoked by another agent):
     ```
@@ -160,19 +155,18 @@ Synthesize a team member's recent activity from daily activity files into a stru
     Period: YYYY-MM-DD to YYYY-MM-DD
     Coverage: {X}/{Y} dates with activity data
     Missing: {dates without data, or "none"}
-    Level context: {loaded / not loaded — reason}
-    File: .claude/memory/reports/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md
+    File: <workspace>/artifacts/one-on-one-prep/<member-slug>/YYYY-MM-DD_to_YYYY-MM-DD.md
     ```
 
 11. **Logging**: On completion, invoke the `/log` skill:
     ```
     /log run_id=<run_id> skill=one-on-one-prep status=<SUCCESS|FAILED|WARNING> detail={member name}: {period}, {coverage}
     ```
-    Use `manual` as run_id if invoked directly by the user. Use `WARNING` if the prep was produced but the level-context block was omitted (missing `Level:` or missing local mirror).
+    Use `manual` as run_id if invoked directly by the user. Use `WARNING` if the prep was produced but the level header is incomplete (missing `Level:` in team.md or missing local mirror).
 
 ## Important Rules
 
-- **Synthesis only.** This skill reads from `activity/` files. It never queries Slack, Jira, or any other data source directly.
+- **Synthesis only.** This skill reads from `collected/` files. It never queries Slack, Jira, or any other data source directly.
 - **Descriptive, not prescriptive.** Surface patterns; the manager decides actions. No "raise a ticket", "loop in X", "rotate first" — the skill lacks the surrounding context to make those judgements.
 - **Every claim needs a source link.** Inherited from the activity files. If an activity item has no link, flag it as unverified.
 - **Don't fabricate observations.** Every Pattern & Observation must be supported by evidence in the activity files. No activity for a day is not a pattern — it might just mean the daily collection wasn't run.

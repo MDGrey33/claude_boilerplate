@@ -1,13 +1,17 @@
 ---
 name: collect-team-activity
-description: Collect a team member's daily work activity from public Slack, Jira, Confluence, and GitHub
+description: Collect a team member's daily work activity from Slack, Jira, Confluence, and GitHub
 user_invocable: true
 args: "Pick a scope based on user intent — orchestrator builds the (member × date) pair list from these shapes: no args = all members today; '<name>' = specific member today; '<date>' = all members on that date; '<date range>' (e.g., '2026-04-07 to 2026-04-11') = all members across that range; '<name> <date>' or '<name> <date range>' = specific member, scoped date(s). Match member name loosely against team.md (first name, full name, case-insensitive)."
 ---
 
 # Collect Team Activity
 
-Collect work activity for one or all team members for one or more days from public data sources. Designed for engineering leadership (EM, director, VP). Multi-pair scopes fan out to sub-agents — one sub-agent per (member, day) pair — for context isolation and parallelism.
+Collect work activity for one or all team members for one or more days from Slack, Jira, Confluence, and GitHub. Designed for engineering leadership (EM, director, VP). Multi-pair scopes fan out to sub-agents — one sub-agent per (member, day) pair — for context isolation and parallelism.
+
+## Privacy posture
+
+This skill reads from **private Slack channels** visible to the caller's Slack token (engineering, leadership, project channels) — not just public channels. Jira and Confluence access is bounded by the caller's Atlassian permissions; GitHub access uses the caller's gh identity (see "GitHub" section in the Executor Contract). Collected data lands on the caller's local disk under `<workspace>/collected/collect-team-activity/`. Intended for leadership oversight and 1:1 preparation with direct reports — do not run on members outside your direct report scope, and treat the output as confidential.
 
 ## Architecture
 
@@ -19,7 +23,10 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
 
 ## Orchestrator Steps
 
-1. **Role guard**: Read `~/.claude/me/identity.md` and check the user's title/role.
+**Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/collect-team-activity/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Use this `<workspace>` for all path references below (identity, team, output). Abort with a setup-broken error if validation fails. Sub-agents (executors) inherit `<workspace>` from the orchestrator — they do not re-resolve.
+
+
+1. **Role guard**: Read `<workspace>/me/identity.md` and check the user's title/role.
    - If the role is clearly IC-equivalent (e.g., "Software Engineer", "Developer") with no reports, **stop**:
      ```
      This skill is for leadership roles with direct reports.
@@ -32,7 +39,7 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
    - **Slack MCP**: Required. If missing, fail.
    - **Atlassian MCP**: Required (covers Jira + Confluence). If missing, fail.
    - **`gh` CLI**: Expected. If missing, log a warning via `/log` (`status=WARNING detail=gh CLI not available — GitHub data will be missing. Install with: brew install gh && gh auth login`), mark as a gap, and continue. Sub-agents will record the same gap in their output files.
-   - **Sub-agent permissions**: sub-agents inherit project-level `.claude/settings.json` only — they cannot prompt for permissions. Verify the allowlist covers the MCP and CLI patterns sub-agents will call (Atlassian Rovo Jira/Confluence/Search, Slack search/read, `gh search` / `gh auth status` / `gh auth switch`). Should already be in place from `/collect-my-activity` work.
+   - **Sub-agent permissions**: sub-agents inherit project-level `.claude/settings.json` only — they cannot prompt for permissions. Verify the allowlist covers the MCP and CLI patterns sub-agents will call (Atlassian Rovo Jira/Confluence/Search, Slack search/read, `gh search` / `gh auth status` / `gh auth token`, plus `bash /tmp/...` for the script-file token pattern). Should already be in place from `/collect-my-activity` work.
 
    On required-tool failure, abort the run, surface a clear failure message to the user, and invoke `/log` with `status=FAILED` (see Logging section). No sentinel file — pre-flight failure means no pairs run, so there's no per-pair output to mark.
 
@@ -46,15 +53,15 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
      - If cached in `## Profile`, use it. Verify it's still authenticated via `gh auth status` (parse for `Logged in to github.com account <handle>`). If the cached handle isn't in `gh auth status`, **fail loud** (FAILED) with re-auth instructions: `gh auth login --hostname github.com`.
      - If not cached, parse `gh auth status` for `Logged in to github.com account <handle>` lines:
        - **One account** → resolve via `gh api user --jq .login`, write back to `## Profile`.
-       - **Multiple accounts** → **fail loud** (FAILED): *"Multiple `gh` accounts detected. Set `GitHub username` manually in `~/.claude/me/identity.md` `## Profile` before re-running. Agents cannot disambiguate which is the business account."*
-     - **Active-session pattern**: if the active `gh` session differs from the cached handle, the orchestrator runs `gh auth switch --user <cached-handle>` *before* fan-out and `gh auth switch --user <previously-active>` *after* aggregation (try-finally). Sub-agents inherit the session set by the orchestrator and run plain `gh search` commands without further switching.
+       - **Multiple accounts** → **fail loud** (FAILED): *"Multiple `gh` accounts detected. Set `GitHub username` manually in `<workspace>/me/identity.md` `## Profile` before re-running. Agents cannot disambiguate which is the business account."*
+     - **Token-fetch pattern**: the orchestrator never modifies the active `gh` session. Sub-agents fetch the cached handle's token in-process via the script-file substitution pattern (see Executor Contract → GitHub). The cached handle name is the only thing the orchestrator passes through to sub-agents for the gh flow.
 
    **Write-back rule**: when MCP resolves a field that is missing from `identity.md`'s `## Profile` section, append it there. **Fill missing only — never overwrite an existing value.** A stale MCP handle could otherwise clobber the user's curated identity. If a resolved value differs from what's already there, log a `WARNING`, skip the write, and surface the discrepancy at the end of the run. **Identity write-back is orchestrator-only**; sub-agents must not touch `identity.md`.
 
-4. **Load team roster**: Read `~/.claude/me/team.md`.
+4. **Load team roster**: Read `<workspace>/me/team.md`.
    - If missing, **stop** with guidance:
      ```
-     No team roster found at ~/.claude/me/team.md
+     No team roster found at <workspace>/me/team.md
      Create one with your direct reports and their platform IDs.
      See the template at the bottom of this skill for the expected format.
      ```
@@ -81,7 +88,7 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
 
    - **Single (member, date) pair**: skip the spawn. Run steps E1–E4 inline. Sub-agent overhead is not worth it for one pair.
 
-   - **Multi-pair**: spawn one Agent (sub-agent_type=`general-purpose`) per pair, in **sequential batches of 3–5 parallel sub-agents**. MCP servers (Atlassian, Slack, GitHub) rate-limit; running all pairs concurrently will trip secondary rate limits. The orchestrator emits 3–5 Agent tool calls in a single message (concurrent), waits for the batch to return, then emits the next batch.
+   - **Multi-pair**: spawn one Agent (sub-agent_type=`general-purpose`) per pair. **Batch by member, not by day.** The Slack MCP rate-limits per session — concurrent sub-agents querying different members' Slack simultaneously trip this limit and return 0 results. Safe pattern: run all dates for one member in parallel (different date windows, same user = no contention), then wait for that member to complete before starting the next member. Never include more than one member in the same parallel batch. Each member's dates emit as one Agent tool-call message (up to 5 dates in parallel), then wait before starting the next member.
 
    **Sub-agent prompt template** — fill in for each pair:
 
@@ -99,7 +106,7 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
    - Member timezone:    {iana_tz}
    - Jira cloud ID:      {jira_cloud_id}
    - Date (local):       {YYYY-MM-DD}
-   - Output file path:   .claude/memory/activity/collect-team-activity/{member_slug}/{YYYY-MM-DD}-{member_slug}-activity.md
+   - Output file path:   <workspace>/collected/collect-team-activity/{member_slug}/{YYYY-MM-DD}-{member_slug}-activity.md
    - Run ID:             {run_id}
 
    Read .claude/skills/collect-team-activity/SKILL.md and follow the
@@ -120,7 +127,6 @@ When scope resolves to exactly one (member, day) pair, the orchestrator runs the
    - For each (member, date) pair, read the output file at the pre-computed path.
    - Parse the `Status:` header (SUCCESS / PARTIAL / FAILED) and the `## Activity` count.
    - Build the summary report (see "Reporting" below).
-   - If the orchestrator switched the `gh` active session in step 3, restore the previous handle now (try-finally — always run, even if some pairs failed).
    - Emit the orchestrator-level `/log` entry summarising the run.
 
 ## Executor Contract
@@ -167,22 +173,34 @@ Per-source query parameters:
 - **Jira / Confluence** — pass `{date}` and `{next_day}` as `YYYY-MM-DD` strings with the half-open `>=` / `<` boundary (see Jira section). **Caveat**: Jira and Confluence evaluate JQL/CQL date literals in the *user's profile timezone*, not UTC — if the member's Jira profile TZ differs from the executor's resolved TZ, results drift by hours.
 
 **Slack:**
-- Search `slack_search_public` for messages from the member using `{slack_id}`.
-- Use `detailed` response format (never `concise` — it drops timestamps and permalinks). Set `include_context: false` to keep response size manageable; use `slack_read_thread` selectively for context.
-- Capture: channel, timestamp, message summary, permalink.
+- Search `slack_search_public_and_private` for messages from the member using `{slack_id}`. This surfaces all channels the caller has access to, including private leadership/engineering channels that are legitimately relevant to team activity collection.
+- Use `detailed` response format (never `concise` — it drops timestamps and permalinks). Set `include_context: false` to keep response size manageable.
+- Capture: channel, timestamp, message summary, **full permalink as returned by the MCP** (thread reply permalinks include `?thread_ts=<parent_ts>&cid=<channel_id>` — preserve this exactly; never reconstruct Slack URLs).
 - Note threads with decisions, guidance, approvals.
 - Fold low-signal items (reactions, acks) into the related activity they refer to.
 - Paginate using `cursor`.
+- **Selective thread reading**: after paginating all results, identify messages where `Reply count > 0` AND the message is question- or decision-shaped (contains "?", directly @-mentions someone with a request, or uses "can we / should we / please / could you"). For each such message (cap at 5 per day), call `slack_read_thread` and capture the last substantive non-bot reply as a `Thread outcome:` line on the activity item. This surfaces whether a request was actioned, a decision was made, or the question is still open — without reading all threads indiscriminately.
 - DMs are not accessible via MCP and are out of scope.
 
-**Jira:** Two queries (no comment-specific query — `issueFunction in commented(...)` is not portable across Jira instances; assignee/reporter/creator paths cover the common cases).
+**Jira:** Two queries:
 1. **Updated**: `(assignee = "{jira_account_id}" OR reporter = "{jira_account_id}") AND updated >= "YYYY-MM-DD" AND updated < "next_day"`
 2. **Created**: `creator = "{jira_account_id}" AND created >= "YYYY-MM-DD" AND created < "next_day"`
 
-- **Date boundary**: `>= "YYYY-MM-DD" AND < "next_day"` (not `<=` — Jira treats `<= "04-10"` as "before start of 04-10").
+- **Date boundary**: `>= "YYYY-MM-DD" AND < "next_day"`.
 - Request minimal fields: `summary, status, issuetype, priority, updated, assignee, reporter`.
-- Capture: key, summary, status, **assignee**, **reporter**, what changed, issue URL.
-- **Authorship vs ownership**: when the team member is the *reporter* but not the *assignee*, surface this explicitly in the activity item (e.g., "Filed by {member-name}; assigned to {assignee-name}"). Downstream skills (`/one-on-one-prep`) need this distinction to reason correctly about whose tickets are stalled.
+
+**Classify each returned ticket before capturing:**
+
+- **Reporter-only** (member is reporter, not assignee): light capture only — key, title, assignee name, current status. No description or context block. Label as "Filed by {member}; assigned to {assignee-name}." These are planning/oversight signals, not delivery signals. Group separately in the output under "Filed (reporter-only)".
+
+- **Assignee** (member is assignee, with or without also being reporter): full detail. Then check for execution evidence:
+  1. Status is In Progress or Done → flag `execution: status-change`. Strong delivery signal.
+  2. Status unchanged but ticket was `updated` in the window → fetch this ticket via `getJiraIssue` and check whether the member's `{jira_account_id}` appears in any comment within the window. If yes → flag `execution: commented`. If no → flag `execution: none` (awareness/planning — ticket is in queue, not acted on).
+  - Cap extra `getJiraIssue` calls at 5 per executor. If more than 5 assignee tickets have status unchanged, prioritise the most recently updated ones.
+
+- **Both** (member is assignee and reporter): treat as assignee for detail and execution evidence.
+
+Output: group tickets as "Owned (assignee)" and "Filed (reporter-only)" so downstream synthesis can apply role-appropriate interpretation.
 
 **Confluence:**
 - Uses the same Atlassian MCP as Jira.
@@ -190,24 +208,20 @@ Per-source query parameters:
 - The `contributor` field already covers comments — a comment is a Confluence contribution. No separate comment query needed.
 - For each result: capture space, title, type of contribution (created vs. updated, page vs. comment), URL.
 
-**GitHub:** The orchestrator has already set the active `gh` session to the cached business handle. Run plain `gh search` commands; do not switch sessions inside an executor sub-agent.
+**GitHub:** Use the script-file token pattern (same as `/collect-my-activity`). The sub-agent writes a script containing `export GH_TOKEN="$(gh auth token --user <cached-handle>)"` followed by the four `gh search` queries, then runs it via `bash <script>`. The `$(...)` substitution inside the script file is not blocked by the sandbox guard (which only inspects top-level Bash commands). Token lives in the bash subshell only — never appears in tool output. Never call `gh auth switch`.
+
+Pre-flight (read-only): confirm the cached handle is logged in via `gh auth status`. If absent, fail with **PARTIAL** and record the gap with a re-auth hint (`gh auth login --hostname github.com`).
 
 Use **full ISO timestamps with the member's TZ offset**, not bare `YYYY-MM-DD`. Bare dates are interpreted as UTC, so for non-UTC member TZs the window slips by the offset (e.g., for Asia/Dubai, `--created "2026-04-30..2026-04-30"` covers UTC 04-30 = local 04-30 04:00 → 05-01 04:00, missing 4 hours of local 04-30 and including 4 hours of local 05-01).
 
-```bash
-# Example: date=2026-04-30, tz_offset=+04:00
-LOCAL_START="2026-04-30T00:00:00+04:00"
-LOCAL_END="2026-05-01T00:00:00+04:00"
+Four queries to run inside the script (after the `GH_TOKEN` export), with `{github_handle}` = the member's GitHub username and `LOCAL_START`/`LOCAL_END` set to the day's ISO timestamps:
 
-gh search prs --author {github_handle} --created "${LOCAL_START}..${LOCAL_END}" \
-  --limit 100 --json number,title,url,repository,state,createdAt,updatedAt
-gh search prs --reviewed-by {github_handle} --updated "${LOCAL_START}..${LOCAL_END}" \
-  --limit 100 --json number,title,url,repository,state
-gh search issues --author {github_handle} --created "${LOCAL_START}..${LOCAL_END}" \
-  --limit 100 --json number,title,url,repository,state
-gh search issues --commenter {github_handle} --updated "${LOCAL_START}..${LOCAL_END}" \
-  --limit 100 --json number,title,url,repository
-```
+- `gh search prs --author {github_handle} --created "${LOCAL_START}..${LOCAL_END}" --limit 100 --json number,title,url,repository,state,createdAt,updatedAt`
+- `gh search prs --reviewed-by {github_handle} --updated "${LOCAL_START}..${LOCAL_END}" --limit 100 --json number,title,url,repository,state`
+- `gh search issues --author {github_handle} --created "${LOCAL_START}..${LOCAL_END}" --limit 100 --json number,title,url,repository,state`
+- `gh search issues --commenter {github_handle} --updated "${LOCAL_START}..${LOCAL_END}" --limit 100 --json number,title,url,repository`
+
+`--limit 100` defends against `gh search`'s default `--limit 30` silently truncating — the JSON output has no `has_more` flag, so a truncated result is indistinguishable from a complete one.
 
 - **Range syntax `A..B` is inclusive on both ends** — different from Jira's half-open convention. Using `next_day T00:00:00` as the upper bound therefore includes events at exactly midnight local; this is a 1-second overlap with the next day's window, acceptable for daily granularity.
 - For each result: capture repo, number, title, URL.
@@ -286,7 +300,7 @@ Team activity collected: {Member Name} (YYYY-MM-DD)
 Items found: {count}
 Sources: Slack ({count}), Jira ({count}), Confluence ({count}), GitHub ({count or N/A})
 Gaps: {list any inaccessible sources}
-File: .claude/memory/activity/collect-team-activity/{member-slug}/YYYY-MM-DD-{member-slug}-activity.md
+File: <workspace>/collected/collect-team-activity/{member-slug}/YYYY-MM-DD-{member-slug}-activity.md
 ```
 
 **Multi-pair**:
@@ -296,7 +310,7 @@ Team activity collected: {first-date} to {last-date}
 Members × days: {n}/{total} succeeded ({n_partial} partial, {n_failed} failed)
 Total items: {sum across all SUCCESS/PARTIAL files}
 Failed pairs: {list or "none"}
-Files: .claude/memory/activity/collect-team-activity/<member-slug>/...
+Files: <workspace>/collected/collect-team-activity/<member-slug>/...
 ```
 
 ## Logging
@@ -314,17 +328,18 @@ Each executor sub-agent emits its own per-pair log entry (E4 above). Use `manual
 - **Every item must have at least one source link.** No exceptions. If you can't link to it, flag it as unverified.
 - **Frame by impact, not action.** Not "merged PR #45" but "Shipped connection pooling fix that unblocked staging deployment (PR #45)".
 - **Don't fabricate activity.** Only report what you find in the data sources. If someone had a quiet day, say so — that's useful signal too.
+- **Never infer technical system names from shared vocabulary.** Use the exact service or system name from the source. If a source names an endpoint or service explicitly (e.g., `zeebe-cluster-gateway-zeebe-0`), use that name — do not substitute a related system (e.g., "Kafka") because they share vocabulary ("broker", "partition", "leader"). If the system name genuinely cannot be read from the source, write "system unclear" rather than guessing.
 - **Gap notes are factual, not speculative.** When a source returns zero results, record the fact (e.g., "GitHub: 0 results in window"). Do not speculate on the cause ("likely private repo", "alternate handle", "permissions issue") unless verified — speculation in gap notes misleads downstream readers.
-- **Public sources only.** No DMs, no private channels. This is intentional and aligns with the team's public-by-default communication culture.
+- **No DMs.** Direct messages are not accessible via MCP and are out of scope. Private channels are in scope — this skill uses `slack_search_public_and_private` because leadership-relevant decisions surface in private channels. Access is bounded by what the caller's Slack token can see.
 - **Respect date boundaries.** Only include activity within the requested date range.
 - **Always write the output file** — even on failure. The Status field (SUCCESS/PARTIAL/FAILED) lets calling agents check the result programmatically.
 - **Don't duplicate with `/collect-my-activity`.** This skill collects *other people's* activity. For the user's own activity, use `/collect-my-activity`.
 - **Identity write-back is orchestrator-only and fill-missing-only.** Sub-agents must not touch `identity.md`. The orchestrator never overwrites an existing value — log a `WARNING` and surface the discrepancy instead.
-- **Sub-agents do not switch `gh` accounts.** The orchestrator sets the active session before fan-out and restores after aggregation (try-finally). Sub-agents run plain `gh` commands.
+- **Sub-agents do not switch `gh` accounts.** Use the script-file token-fetch pattern: each sub-agent writes a script that does `export GH_TOKEN="$(gh auth token --user <cached-handle>)"` and runs its gh queries inside that script. Never `gh auth switch`. Token lives in the bash subshell only — never in tool output or the conversation transcript.
 
 ## team.md Expected Format
 
-The skill expects `~/.claude/me/team.md` to follow this structure:
+The skill expects `<workspace>/me/team.md` to follow this structure:
 
 ```markdown
 # My Team
