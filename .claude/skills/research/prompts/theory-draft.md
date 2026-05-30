@@ -20,7 +20,7 @@ Brief: "Read the corpus and synthesis. Draft the theory that best fits the WEIGH
 ### Candidate B — Adversarial alternative
 Brief: "Read the corpus and synthesis. Draft the strongest ALTERNATIVE theory — the one that would emerge if the dominant interpretation is wrong. Steelman the contrarian position. Use the structure below."
 
-Both candidates write to `~/workspace/research/{{session_id}}/06-candidates/candidate-A.md` and `candidate-B.md`.
+Both candidates write to `<workspace>/research/{{session_id}}/06-candidates/candidate-A.md` and `candidate-B.md`.
 
 Both must have access to:
 - `03-synthesis.md`

@@ -24,7 +24,7 @@ Goal: feed Stage 4 (gap-fill) with high-priority contradictions that need a tieb
 **Tiebreaker needed:** {{specific evidence type}} — feeds Stage 4 as gap with id `gap-from-T-{{N}}`
 ```
 
-Write to `~/workspace/research/{{session_id}}/03b-triage-contradictions.md`.
+Write to `<workspace>/research/{{session_id}}/03b-triage-contradictions.md`.
 
 These triage contradictions automatically become Stage 4 gap-fill targets (one gap-fill agent per triage contradiction, in addition to other gaps from synthesis).
 
@@ -37,7 +37,7 @@ These triage contradictions automatically become Stage 4 gap-fill targets (one g
 Goal: authoritative pass with full corpus available, including gap-fill results.
 
 Read everything:
-- `~/workspace/research/{{session_id}}/corpus/evidence-ledger.jsonl`
+- `<workspace>/research/{{session_id}}/corpus/evidence-ledger.jsonl`
 - All reports in `01-breadth/`, `02-depth/`, `04-gap-fill/`
 - `03-synthesis.md` and `03b-triage-contradictions.md`
 
@@ -90,7 +90,7 @@ When a contradiction is unresolvable from existing corpus AND the question matte
 
 ## Output
 
-Write `~/workspace/research/{{session_id}}/05-contradictions.md` containing:
+Write `<workspace>/research/{{session_id}}/05-contradictions.md` containing:
 - Cross-reference to triage contradictions from Pass 1 (and whether Stage 4 gap-fills resolved them)
 - All Pass 2 contradictions documented with resolution status
 - All Pass 2 inconsistencies with action taken
