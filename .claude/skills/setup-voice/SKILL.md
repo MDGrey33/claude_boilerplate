@@ -1,8 +1,6 @@
 ---
-name: voice-setup
+name: setup-voice
 description: Install a local neural voice interface for Claude Code on macOS Apple Silicon. Wires mlx-whisper (STT) + Kokoro TTS (offline neural voices) into voice-claude and vtranscribe CLI scripts. Two voice contexts — personal (af_heart) and tech (af_bella). No cloud APIs, no API keys.
-category: setup
-platform: macOS Apple Silicon (M1+)
 user_invocable: true
 ---
 

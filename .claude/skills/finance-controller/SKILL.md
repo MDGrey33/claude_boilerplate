@@ -5,6 +5,8 @@ user_invocable: true
 args: Optional — "audit" (default, full scan) | "skills" | "mcps" | "claude-md" | "apply <recommendation-id>"
 ---
 
+# Finance Controller — Cost & Context Auditor
+
 ## Model Selection
 
 - **Default model:** Haiku — the audit is structured file inspection (sizes, frontmatter grep, MCP list parsing); the script does the work.

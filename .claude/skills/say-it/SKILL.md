@@ -6,13 +6,15 @@ args: Optional. What to speak — "last response", a section name, a file path, 
 allowed-tools: Write, Bash(kokoro-say *), Bash(pkill *), Bash(kill *), Bash(ls *)
 ---
 
+# Say It — Speak Content Aloud
+
 ## Prerequisites
 
-Requires the voice stack installed via `/voice-setup`:
+Requires the voice stack installed via `/setup-voice`:
 - `kokoro-say` in `~/bin/`
 - Kokoro models at `~/.cache/kokoro/`
 
-Run `/voice-setup` first if `kokoro-say` is not found.
+Run `/setup-voice` first if `kokoro-say` is not found.
 
 ## Model Selection
 
