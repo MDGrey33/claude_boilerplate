@@ -61,7 +61,7 @@ Semantic memory (optional): markdown memory works with no extra setup. For seman
 | `/setup-playwright-mcp` | Manual | Install and configure Playwright MCP for browser automation |
 | `/setup-nemoclaw` | Manual | Install and configure NVIDIA NemoClaw (secure agent runtime) |
 | `/research` | Manual | Unified research with three depth modes — `--shallow` (single-pass parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). Replaces the former `research-executor` and `deep-research-orchestrator`. |
-| `/voice-setup` | Manual | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
+| `/setup-voice` | Manual | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
 | `/say-it` | Manual | Speak content aloud via Kokoro neural TTS (local, offline) |
 | `/linkedin-pitch-deflector` | Manual | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
 

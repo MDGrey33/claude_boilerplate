@@ -6,6 +6,8 @@ args: Optional. "review" (default — show batch, confirm once, then send) or "a
 allowed-tools: ToolSearch, mcp__chrome-control__tabs_context_mcp, mcp__chrome-control__navigate, mcp__chrome-control__computer, mcp__chrome-control__browser_batch, mcp__chrome-control__find, mcp__chrome-control__read_page, mcp__chrome-control__get_page_text, AskUserQuestion
 ---
 
+# LinkedIn Pitch Deflector
+
 ## Purpose
 
 Cold outreach on LinkedIn is high-volume. Most of it turns into a sales pitch by the sender's 2nd or 3rd message — but not all of it, and a blanket deflect-on-sight would also kill genuine peer conversations and inbound role offers. So this skill does **two** things:

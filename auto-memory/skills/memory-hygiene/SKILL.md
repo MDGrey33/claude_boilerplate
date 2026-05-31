@@ -5,6 +5,8 @@ user_invocable: true
 args: `audit` (default) | `promote` | `archive` | `compact` | `graduate`
 ---
 
+# Memory Hygiene
+
 ## When to Use
 
 - MEMORY.md shows 30+ entries

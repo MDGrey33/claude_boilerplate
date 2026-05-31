@@ -4,6 +4,8 @@ description: Wire the optional auto-memory system into the user's ~/.claude/. Cr
 user_invocable: true
 ---
 
+# Setup Auto-Memory
+
 ## What this does
 
 Wires the optional auto-memory system from `auto-memory/` (in this boilerplate) into the user's `~/.claude/`. After running this, the user has:
