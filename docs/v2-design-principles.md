@@ -1,6 +1,6 @@
 # Boilerplate v2 — Design Principles
 
-**Status:** Drafted 2026-05-05 from the v2 redesign discussion. Companion to `migration-plan.md`. Read this for the *what* and *why*; read the migration plan for the *how* and the migration sequence.
+**Status:** Drafted 2026-05-05 from the v2 redesign discussion. Read this for the *what* and *why* of the v2 architecture.
 
 ## Setup
 
@@ -30,7 +30,7 @@
 
 - The workspace itself supports random tasks that don't warrant a project entry. Workspace-level `workstreams/`, `sessions/active/`, `collected/`, `artifacts/`, and `contributions/` exist at the workspace root for this — same layout as projects, just at the level above.
 - `<workspace>/.claude/memory/MEMORY.md`, `lessons-learned.md`, and `project-context.md` always exist (the third holds workspace-level domain context — overarching focus areas of this workspace, distinct from `me/identity.md` which is user-scoped: identity is "who I am", project-context is "what this workspace is for"). Without auto-memory, MEMORY.md and lessons-learned.md are the user's primary personal memory store. With auto-memory enabled, they become a curated layer above the typed atom files; `project-context.md` remains user-curated either way.
-- Workspace-level skills (e.g., `/collect-team-activity`, `/one-on-one-prep`, `/my-digest`, `/collect-my-activity`) write to `<workspace>/{collected,artifacts}/`. Project-scoped skills write under `<workspace>/projects/<slug>/{collected,artifacts}/`.
+- Workspace-level skills (e.g., `/collect-team-activity`, `/one-on-one-prep`, `/collect-my-activity`, and `/my-digest` — *planned, not yet shipped*) write to `<workspace>/{collected,artifacts}/`. Project-scoped skills write under `<workspace>/projects/<slug>/{collected,artifacts}/`.
 - Identity, brag log, growth, and team files live at `<workspace>/me/`: `identity.md`, `brag-log.md`, `growth.md`, optionally `team.md`.
 
 ## Memory loading architecture
@@ -77,7 +77,7 @@ The inclusion list is deliberately narrow. Memory entries are short and high-sig
 - **Multiple concurrent sessions are supported, with the open item as the conflict unit.** Two sessions on the same workstream working on different open items are valid; two sessions on the same open item are not. `/hello` scans active markers before writing its own and warns on conflict (matching workstream + open item), with the existing marker's age, and asks the user whether to proceed or stand down.
 - **Concurrency is enforced via optimistic concurrency (mtime-check + retry), not locks.** A crashed session leaves a stale lock that blocks every future write until manually cleared; mtime-check has no persistent state to recover. `/bye` edits workstream files surgically (open-item status changes, additions to context/decisions/notes) — never rewrites them from scratch — with mtime-check guarding the targeted edits. `latest-session.md` is overwritten in full with a mtime-check guard; on conflict, `/bye` prompts the user to overwrite, append, or skip rather than silently clobbering.
 - `/bye` writes lessons to the active context (repo `.claude/memory/` for repo work; workspace memory or auto-memory for personal work), updates the brag log if warranted, and removes its own session marker.
-- `/memory-hygiene` (Roland's package) manages the auto-memory lifecycle when enabled — typed atom hygiene, graduation into curated long-form, archival.
+- `/memory-hygiene` (the opt-in auto-memory package) manages the auto-memory lifecycle when enabled — typed atom hygiene, graduation into curated long-form, archival.
 
 ## Agent-guardrails layering
 
