@@ -1,6 +1,6 @@
 ---
 name: research
-description: Unified research skill with three depth modes. Use `--shallow` (single-pass parallel web search via the `research-expert` agent) for "quick research", "look up", "find me info on". Use `--standard` (decompose → parallel subagents → synthesize → cite-check) for "research X", "investigate". Use `--deep` (full 9-stage pipeline with breadth scavenging, depth iteration, gap-fill, contradiction detection, theory drafting, fact-check, three-tier output) for "deep research", "thorough investigation", "full literature review", "research this rigorously". Replaces the older `research-executor` and `deep-research-orchestrator` skills.
+description: Unified research skill with three depth modes. Use `--shallow` (single-pass parallel web search via the `research-expert` agent) for "quick research", "look up", "find me info on". Use `--standard` (decompose → parallel subagents → synthesize → cite-check) for "research X", "investigate". Use `--deep` (full 9-stage pipeline with breadth scavenging, depth iteration, gap-fill, contradiction detection, theory drafting, fact-check, three-tier output) for "deep research", "thorough investigation", "full literature review", "research this rigorously". Replaces the older `deep-research-orchestrator` skill.
 ---
 
 # Research
@@ -351,7 +351,7 @@ This skill orchestrates these existing skills (do not duplicate their logic):
 - `fact-checker` — credibility rubric (referenced inline by deep subagents)
 - `got-controller` — optional, for very complex topics where Graph-of-Thoughts path optimization is warranted (Stage 1 + Stage 2 can run as GoT Generate/Aggregate)
 
-This skill calls the `research-expert` agent (registered separately, not a skill) at every depth. Do not invoke the archived `research-executor` or `deep-research-orchestrator` skills — this skill supersedes both.
+This skill calls the `research-expert` agent (registered separately, not a skill) at every depth. Do not invoke the archived `deep-research-orchestrator` skill — this skill supersedes it.
 
 ## Success criteria
 

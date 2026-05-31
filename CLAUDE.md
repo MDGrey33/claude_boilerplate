@@ -62,7 +62,7 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 | `/setup-wikibase` | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
 | `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
-| `/research` | Unified research with three depth modes — `--shallow` (parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). Replaces the former `research-executor` and `deep-research-orchestrator`. |
+| `/research` | Unified research with three depth modes — `--shallow` (parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). Replaces the former `deep-research-orchestrator`. |
 | `/setup-voice` | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
 | `/say-it` | Speak content aloud via Kokoro neural TTS (local, offline) |
 | `/linkedin-pitch-deflector` | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
@@ -117,6 +117,7 @@ Refer to these files for more detail (use `@` to include them in context):
 | Behaviour of a skill (steps, flags, inputs) | that skill's `SKILL.md` |
 | Setup / workflow steps a user follows | `README.md` (Quick Start), this `CLAUDE.md` (Workflow) |
 | A template under `.claude/skills/setup-workspace/templates/` | the template itself; and if structural, `init.py` or `add_project.py` `STARTER_MAP` |
+| Added / removed / renamed an **agent** | `README.md` and this `CLAUDE.md` (note the agent where relevant; agents live in `.claude/agents/`, deployed + synced like skills) |
 | An agent operating rule | `.claude/docs/agent-guardrails.md` (overwritten by `init` and `sync` — the boilerplate is the canonical source) |
 | Architecture, lifecycle, or skill-chain wiring | `.claude/docs/architecture.md` |
 | Code style, file organisation, naming patterns | `.claude/docs/conventions.md` |

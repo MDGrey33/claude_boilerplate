@@ -135,4 +135,4 @@ The default model handles a typical invocation. Promotions and demotions are run
 
 ## Changing This Policy
 
-This file is the single source of truth for model selection. Route changes through `/skills-manager`.
+This file is the default model-selection policy. A skill may declare a sanctioned skill-local override in its own `## Model Selection` section (e.g. `research/MODEL_POLICY.md`, which deliberately prioritises quality over cost) — when it does, the skill-local policy wins for that skill. Route changes to this default through `/skills-manager`.
