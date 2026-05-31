@@ -1,10 +1,10 @@
-# Cognee-Powered Claude Code Boilerplate
+# Claude Code Boilerplate
 
-Persistent memory and session management for Claude Code, powered by [cognee](https://github.com/topoteretes/cognee) knowledge graphs.
+Persistent memory and session management for Claude Code, with a pluggable semantic-memory backend.
 
 ## What This Does
 
-- **Dual memory**: Markdown files for fast, deterministic access + Cognee knowledge graph for semantic retrieval
+- **Layered memory**: Markdown files for fast, deterministic access + an optional semantic backend ([cognee](https://github.com/topoteretes/cognee) knowledge graphs or a [Wikibase](https://wikiba.se/) provenance graph) for semantic retrieval — pick one via `/setup-cognee` or `/setup-wikibase` (see `.claude/docs/memory-systems.md`)
 - **Session management**: `/hello` loads context at start, `/bye` persists it at end
 - **Lessons learned**: Captures mistakes, conventions, and patterns during session wrap-up
 - **Skills lifecycle**: `/skills-manager` adds, updates, removes, and reviews skills based on lessons or requests
@@ -26,13 +26,13 @@ claude
 2. **Init** — `/setup-workspace init --workspace <path>` deploys skills, generates `CLAUDE.md`, bootstraps identity
 3. **Add projects** — `/setup-workspace add-project <slug>` from the workspace root
 4. **Start working** — `/hello` to begin each session, `/bye` to end
-5. **Cognee (optional)** — `/setup-cognee` for semantic memory, after the workspace is verified end-to-end
+5. **Semantic memory (optional)** — `/setup-cognee` or `/setup-wikibase` for semantic retrieval, after the workspace is verified end-to-end. See `.claude/docs/memory-systems.md` to choose a backend.
 
 ## Requirements
 
 - [Claude Code](https://claude.ai/code) CLI
 
-Cognee (optional): `/setup-cognee` detects your environment and installs Python, uv, Docker, and PostgreSQL as needed. Supports OpenAI, Anthropic, and Ollama as the LLM backend.
+Semantic memory (optional): markdown memory works with no extra setup. For semantic retrieval, pick one backend — `/setup-cognee` (knowledge graph; detects your environment and installs Python, uv, Docker, and PostgreSQL as needed; supports OpenAI, Anthropic, and Ollama as the LLM backend) or `/setup-wikibase` (Wikidata-style graph with claim-level provenance). See `.claude/docs/memory-systems.md` for the trade-offs.
 
 ## Skills Reference
 
@@ -52,14 +52,18 @@ Cognee (optional): `/setup-cognee` detects your environment and installs Python,
 | `/log` | Auto (via skills) | Append structured entry to agent log |
 | `/contribute` | Manual | Generalize a lesson and stage it in `<workspace>/contributions/` |
 | `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
-| `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine |
+| `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine (semantic-memory backend option) |
+| `/setup-wikibase` | Manual | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/sanitizer` | Auto (via `/contribute`, `/pull-contributions`) or manual | Scrub files for secrets, PII, private context, tone risks before publish. `--check` mode for CI gates. |
 | `/finance-controller` | Manual (weekly sweep) | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Reports + delegates; never edits directly. |
 | `/claude-expert` | Manual | Reference for Claude Code surfaces (skills vs hooks vs subagents vs MCPs vs memory vs settings). Answers "where should this live" and routes to the doer skill. |
 | `/setup-auto-memory` | Manual | Wire in the optional auto-memory system (typed atomic files in `~/.claude/projects/<slug>/memory/`). See `auto-memory/README.md`. |
 | `/setup-playwright-mcp` | Manual | Install and configure Playwright MCP for browser automation |
 | `/setup-nemoclaw` | Manual | Install and configure NVIDIA NemoClaw (secure agent runtime) |
-| `/deep-research-orchestrator` | Manual | Run a 9-stage deep research pipeline — breadth, depth, synthesis, gap-fill, contradiction detection, theory, fact-check; tiered output with credibility tagging |
+| `/research` | Manual | Unified research with three depth modes — `--shallow` (single-pass parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). Replaces the former `research-executor` and `deep-research-orchestrator`. |
+| `/voice-setup` | Manual | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
+| `/say-it` | Manual | Speak content aloud via Kokoro neural TTS (local, offline) |
+| `/linkedin-pitch-deflector` | Manual | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
 
 ### Skill Chains
 
@@ -152,7 +156,7 @@ Working state and skill outputs sit at the **project root** (gitignored). Commit
 ```
 
 **Markdown** is the primary store — always available, fast, deterministic.
-**Cognee** is the optional enrichment layer — semantic search across accumulated knowledge. Skills degrade gracefully if unavailable.
+**The semantic backend** (cognee or Wikibase, whichever you set up) is the optional enrichment layer — semantic search across accumulated knowledge. Skills degrade gracefully if none is configured. See `.claude/docs/memory-systems.md` to choose.
 
 ### How memory loads
 
