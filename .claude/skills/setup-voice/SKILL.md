@@ -4,7 +4,7 @@ description: Install a local neural voice interface for Claude Code on macOS App
 user_invocable: true
 ---
 
-# Voice Interface Setup — macOS Apple Silicon
+# Setup Voice — Local Neural Voice Interface (macOS Apple Silicon)
 
 Installs a fully local voice pipeline:
 
