@@ -4,7 +4,7 @@
 
 ## Memory & Knowledge
 
-This workspace uses a layered memory system. Optionally, it integrates with **cognee** for semantic search across the corpus.
+This workspace uses a layered memory system. Optionally, it integrates with a semantic-memory backend — **cognee** (knowledge graph) or **Wikibase** (provenance graph) — for semantic search across the corpus. See `.claude/docs/memory-systems.md` to choose one.
 
 | Layer | Location | Populated by |
 |-------|----------|--------------|
@@ -58,7 +58,7 @@ Separation of concerns: `workstreams/` files are open-item ledgers that `/bye` w
 
 ## Prerequisites
 
-Run `/setup-cognee` for cognee semantic-memory installation. It detects your environment and walks you through the setup.
+Run `/setup-cognee` or `/setup-wikibase` to install a semantic-memory backend (optional). Each detects your environment and walks you through the setup. See `.claude/docs/memory-systems.md` to choose.
 
 ## Available Skills
 
@@ -77,14 +77,17 @@ Run `/setup-cognee` for cognee semantic-memory installation. It detects your env
 | `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
-| `/setup-cognee` | Install and configure cognee-mcp on this machine |
+| `/setup-cognee` | Install and configure cognee-mcp on this machine (semantic-memory backend option) |
+| `/setup-wikibase` | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
 | `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
-| `/setup-nemoclaw` | Install and configure NVIDIA NemoClaw (secure agent runtime) |
+| `/research` | Unified research with three depth modes — `--shallow` (parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). |
+| `/setup-voice` | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
+| `/say-it` | Speak content aloud via Kokoro neural TTS (local, offline) |
+| `/linkedin-pitch-deflector` | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
 | `/sanitizer` | Scrub a file/dir/glob for secrets, PII, private context, and tone risks before publishing. Auto-invoked by `/contribute` and `/pull-contributions`. Has a `--check` mode for pre-commit/CI gates. |
 | `/finance-controller` | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Produces a prioritized report; delegates execution to `skills-manager` or asks for approval. Use weekly or when sessions feel slow. |
 | `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |
-| `/deep-research-orchestrator` | Run a 9-stage deep research pipeline — breadth, depth, synthesis, gap-fill, contradiction detection, theory, fact-check; tiered output with credibility tagging |
 
 ### Skill chains (automatic)
 - `/hello` → `/mcp-doctor` (session mode: enumerates loaded tools, no process spawning)
@@ -107,7 +110,7 @@ To propose a skill improvement:
 
 ## Workflow
 
-1. **Setup** (once per machine): `/setup-workspace init` from this workspace dir. Optional: `/setup-cognee` for semantic search.
+1. **Setup** (once per machine): `/setup-workspace init` from this workspace dir. Optional: `/setup-cognee` or `/setup-wikibase` for a semantic-memory backend.
 2. **Start**: `/hello` at the start of each session.
 3. **Work**: pick an existing project, work at workspace level on a random task, or describe a new project — the picker handles inline registration.
 4. **End**: `/bye` captures lessons, appends to brag log if warranted, and clears the session marker.
@@ -126,5 +129,7 @@ To propose a skill improvement:
 Refer to these files for more detail (use `@` to include them in context):
 - `.claude/docs/architecture.md` — boilerplate architecture
 - `.claude/docs/conventions.md` — code style and patterns
+- `.claude/docs/memory-systems.md` — how to choose a semantic-memory backend (markdown / cognee / Wikibase)
 - `.claude/docs/cognee-usage.md` — how to use cognee MCP tools
+- `.claude/docs/wikibase-migration-patterns.md` — patterns for the Wikibase provenance-graph backend
 - `.claude/docs/agent-guardrails.md` — agent behaviour by scope (universal / session / autonomous)

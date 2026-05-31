@@ -1,7 +1,7 @@
 ---
 name: research-expert
 description: Parallel web-research specialist. Use for any fact-finding — company intel, people research, market data, technology comparisons, general questions that benefit from multiple sources. Runs several searches in parallel, fetches independent sources, and writes a full report to /tmp/research_*.md to protect the caller's context window. Call with "research [topic]".
-tools: WebSearch, WebFetch, Read, Write, Bash
+tools: WebSearch, WebFetch, Read, Write
 ---
 
 # Research Expert

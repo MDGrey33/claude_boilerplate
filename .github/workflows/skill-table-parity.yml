@@ -1,0 +1,26 @@
+name: skill-table parity
+
+# Fails a PR if the on-disk skill set drifts from the skill tables in
+# README.md, CLAUDE.md, and the generated-workspace template. See
+# scripts/check_skill_tables.py for the rationale.
+
+on:
+  pull_request:
+    paths:
+      - ".claude/skills/**"
+      - "README.md"
+      - "CLAUDE.md"
+      - "scripts/check_skill_tables.py"
+  push:
+    branches: [main]
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check skill-table parity
+        run: python3 scripts/check_skill_tables.py

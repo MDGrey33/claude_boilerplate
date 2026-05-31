@@ -2,7 +2,7 @@
 
 **Applies to:** every skill. Read this before invoking subagents, LLM calls, or deciding whether to run a script.
 
-This is the shared policy that each skill's `## Model Selection` section refers to. It lives at `.claude/skills/_shared/MODEL_SELECTION.md` and is deployed to your workspace alongside the skills.
+This is the shared policy that a skill's `## Model Selection` section may reference (some do, some inline their own picks). It lives at `.claude/skills/_shared/MODEL_SELECTION.md` and is deployed to your workspace alongside the skills.
 
 ---
 

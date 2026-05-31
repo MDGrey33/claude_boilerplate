@@ -59,7 +59,6 @@ Semantic memory (optional): markdown memory works with no extra setup. For seman
 | `/claude-expert` | Manual | Reference for Claude Code surfaces (skills vs hooks vs subagents vs MCPs vs memory vs settings). Answers "where should this live" and routes to the doer skill. |
 | `/setup-auto-memory` | Manual | Wire in the optional auto-memory system (typed atomic files in `~/.claude/projects/<slug>/memory/`). See `auto-memory/README.md`. |
 | `/setup-playwright-mcp` | Manual | Install and configure Playwright MCP for browser automation |
-| `/setup-nemoclaw` | Manual | Install and configure NVIDIA NemoClaw (secure agent runtime) |
 | `/research` | Manual | Unified research with three depth modes — `--shallow` (single-pass parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). Replaces the former `research-executor` and `deep-research-orchestrator`. |
 | `/setup-voice` | Manual | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
 | `/say-it` | Manual | Speak content aloud via Kokoro neural TTS (local, offline) |
