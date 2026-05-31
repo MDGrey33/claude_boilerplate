@@ -45,6 +45,8 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 
 | Skill | Purpose |
 |-------|---------|
+| `/setup-workspace` | (v2) Workspace lifecycle — `init` (first-time setup: deploys skills/agents/docs, generates `CLAUDE.md`), `add-project <slug>` (scaffolds + registers a project), `sync` (re-copies skills/agents from source, flags conflicts) |
+| `/project-registry` | (v2) Manage the workspace project registry — `add` / `remove` / `update` / `list`. Single mutation point; other skills read the index directly. |
 | `/hello` | Start a new session — loads context, checks MCP health, recaps last session |
 | `/bye` | End the session — summarize work, capture lessons, persist memory |
 | `/lessons` | Capture lessons (default) OR `scan` session files / `scan --deep` JSONL transcripts for skill-change proposals. Auto-invoked by `/bye`. |
@@ -56,10 +58,15 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 | `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
 | `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
 | `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
-| `/setup-cognee` | Install and configure cognee-mcp on this machine |
+| `/setup-cognee` | Install and configure cognee-mcp on this machine (semantic-memory backend option) |
+| `/setup-wikibase` | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
 | `/setup-playwright-mcp` | Install and configure Playwright MCP for browser automation |
-| `/deep-research-orchestrator` | Run a 9-stage deep research pipeline — breadth, depth, synthesis, gap-fill, contradiction detection, theory, fact-check; tiered output with credibility tagging |
+| `/setup-nemoclaw` | Install and configure NVIDIA NemoClaw (secure agent runtime) |
+| `/research` | Unified research with three depth modes — `--shallow` (parallel web search via the `research-expert` agent), `--standard` (decompose → parallel subagents → synthesize → cite-check), `--deep` (9-stage pipeline: breadth, depth, gap-fill, contradiction detection, theory, fact-check, tiered output). Replaces the former `research-executor` and `deep-research-orchestrator`. |
+| `/voice-setup` | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
+| `/say-it` | Speak content aloud via Kokoro neural TTS (local, offline) |
+| `/linkedin-pitch-deflector` | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
 | `/sanitizer` | Scrub a file/dir/glob for secrets, PII, private context, and tone risks before publishing. Auto-invoked by `/contribute` and `/pull-contributions`. Has a `--check` mode for pre-commit/CI gates. |
 | `/finance-controller` | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Produces a prioritized report; delegates execution to `skills-manager` or asks for approval. Use weekly or when sessions feel slow. |
 | `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |
@@ -96,7 +103,9 @@ To propose a skill improvement:
 Refer to these files for more detail (use `@` to include them in context):
 - `.claude/docs/architecture.md` — boilerplate architecture
 - `.claude/docs/conventions.md` — code style and patterns
+- `.claude/docs/memory-systems.md` — how to choose a semantic-memory backend (markdown / cognee / Wikibase)
 - `.claude/docs/cognee-usage.md` — how to use cognee MCP tools for semantic memory
+- `.claude/docs/wikibase-migration-patterns.md` — patterns for the Wikibase provenance-graph backend
 - `.claude/docs/agent-guardrails.md` — operational rules for agents working in this repo
 
 ## Keeping docs in sync
