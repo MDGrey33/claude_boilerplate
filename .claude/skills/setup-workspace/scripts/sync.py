@@ -307,6 +307,10 @@ def print_plan(workspace: Path, source: Path, plan: dict, starter_plan: dict) ->
     print(f"== local-only ({len(plan['local_only'])}) ==")
     for rel in plan["local_only"]:
         print(f"? {rel}")
+    if plan["local_only"]:
+        print("  (present in your workspace but not upstream — either something you")
+        print("   added locally, OR a skill/agent upstream removed or renamed. sync never")
+        print("   deletes; if it's an upstream removal, delete it by hand. See MIGRATION.md.)")
     print()
     print(f"== unchanged ({len(plan['unchanged'])} files match source) ==")
     print()

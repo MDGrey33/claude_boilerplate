@@ -7,7 +7,7 @@ args: Optional preferred preset (minimal, full)
 
 ## Model Selection
 
-See `~/.claude/skills/_shared/MODEL_SELECTION.md` for full policy.
+See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full policy.
 
 - **Default model:** Sonnet — Wikibase setup involves environment detection, Docker compose authoring, schema design judgment, and migration script generation
 - **Demote to Haiku when:** running pre-built migration scripts on a chunk of data (mechanical batch processing)

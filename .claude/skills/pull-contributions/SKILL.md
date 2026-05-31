@@ -7,7 +7,7 @@ args: Path to a workspace's contributions/ folder (e.g., <workspace>/contributio
 
 ## Model Selection
 
-See `~/.claude/skills/_shared/MODEL_SELECTION.md` for full policy.
+See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full policy.
 
 - **Default model:** Haiku 4.5 — mechanical file copy + path rewrite from project to boilerplate
 - **Promote to Sonnet when:** a contribution needs de-identification or rewording before merging

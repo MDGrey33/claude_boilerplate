@@ -7,7 +7,7 @@ args: Optional description of the lesson or improvement to generalize
 
 ## Model Selection
 
-See `~/.claude/skills/_shared/MODEL_SELECTION.md` for full policy.
+See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full policy.
 
 - **Default model:** Sonnet 4.6 — generalizing a project-specific fix into a reusable pattern needs judgment about what's portable
 - **Promote to Sonnet when:** never — generalization is the core task
