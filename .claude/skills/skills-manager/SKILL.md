@@ -43,7 +43,7 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
    - Community conventions for the topic
    - Relevant knowledge from similar shared skills
 
-   Also load the **skill authoring principles** from `docs/v2-design-principles.md` (write the *what* not the *how*; agentic-first for external services; nudge on known agent friction; deterministic prescription only for stable mechanical work). If an up-to-date best practice conflicts with a principle, **flag the conflict explicitly in the proposal** — do not silently pick one. The user decides whether to update the principle (best practice has moved on) or apply the principle and override the best practice for this skill (principle still holds).
+   Apply the four **skill authoring principles** (write the *what* not the *how*; agentic-first for external services; nudge on known agent friction; deterministic prescription only for stable mechanical work) — these are your operating default, used directly with no file load. When a call is genuinely contested — a best-practice-vs-principle conflict, or an edge the one-liners don't settle — consult `<source>/docs/v2-design-principles.md` for the full rationale: resolve `<source>` from `<workspace>/.claude/.source`; if it or the file is absent, proceed on the inline principles and note the doc was unavailable. If an up-to-date best practice conflicts with a principle, **flag the conflict explicitly in the proposal** — do not silently pick one. The user decides whether to update the principle (best practice has moved on) or apply the principle and override the best practice for this skill (principle still holds).
 
 4. **Read current skills**: Read the relevant skill files from `.claude/skills/*/SKILL.md` to understand current behavior.
 
@@ -54,7 +54,7 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
    - Expected improvement
    - Make sure the changes dont overlap or contradict other services, all skills should work together as a system
    - Identify if additional files need to be updated including but not limited to claude.md and README if relevant
-   - Honours the four skill authoring principles (`docs/v2-design-principles.md` → "Skill authoring principles"). If a researched best practice conflicts with a principle, the proposal must surface the conflict and recommend a resolution — never silently choose.
+   - Honours the four skill authoring principles (above; full rationale in `<source>/docs/v2-design-principles.md`, loaded only when a decision turns on it). If a researched best practice conflicts with a principle, the proposal must surface the conflict and recommend a resolution — never silently choose.
 
    If no changes are warranted, say so and explain why.
 
