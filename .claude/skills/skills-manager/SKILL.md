@@ -9,6 +9,15 @@ args: Optional description of what to add, update, remove, or improve
 
 You manage the full lifecycle of skills: adding new skills, updating existing ones, removing obsolete ones, and reviewing skills based on lessons learned or explicit user requests.
 
+## Model Selection
+
+See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full policy.
+
+- **Default model:** Sonnet — weighing lessons, researching practices, and drafting skill changes is judgment work
+- **Deterministic parts:** skill inventory and section-presence checks (grep, file listing) — scripts, not LLM calls
+- **Promote to Opus when:** holistic skill-system review, or a proposal that restructures how skills interact (finance-controller escalates its hard judgment calls here)
+- **Demote to Haiku when:** never — even a small skill edit changes behaviour other skills depend on
+
 ## Steps
 
 **Setup — Resolve `<workspace>`**: The skill's base directory is `<workspace>/.claude/skills/skills-manager/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Abort with a setup-broken error if validation fails.
@@ -55,6 +64,7 @@ You manage the full lifecycle of skills: adding new skills, updating existing on
    - Make sure the changes dont overlap or contradict other services, all skills should work together as a system
    - Identify if additional files need to be updated including but not limited to claude.md and README if relevant
    - Honours the four skill authoring principles (above; full rationale in `<source>/docs/v2-design-principles.md`, loaded only when a decision turns on it). If a researched best practice conflicts with a principle, the proposal must surface the conflict and recommend a resolution — never silently choose.
+   - **Model Selection check**: if the skill being added, updated, or reviewed lacks a `## Model Selection` section, draft one as part of the proposal. Apply the shared policy's decision order (script? → Haiku? → Sonnet default? → Opus, sparingly?) to the skill's actual work — read `.claude/skills/_shared/MODEL_SELECTION.md` for tier definitions, and match the block conventions of skills that already carry one. A tier gap caught here ships annotated instead of waiting for the next `/finance-controller` audit.
 
    If no changes are warranted, say so and explain why.
 
