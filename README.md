@@ -63,6 +63,7 @@ Semantic memory (optional): markdown memory works with no extra setup. For seman
 | `/setup-voice` | Manual | Install a local, offline neural voice interface (macOS Apple Silicon) — mlx-whisper (STT) + Kokoro TTS wired into `voice-claude` / `vtranscribe` CLI scripts. No cloud APIs. |
 | `/say-it` | Manual | Speak content aloud via Kokoro neural TTS (local, offline) |
 | `/linkedin-pitch-deflector` | Manual | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
+| `/google-script-deploy` | Called by other skills, or manual | Deploy an HTML file as a Google Apps Script web app with a stable URL — handles clasp install, auth, project creation, and in-place redeploys. Per-directory config in `clasp-projects.json`; no global state. |
 
 ### Skill Chains
 
