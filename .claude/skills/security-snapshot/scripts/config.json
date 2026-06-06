@@ -1,0 +1,23 @@
+{
+  "_README": "Per-org configuration. Fill in github_org / aws_profile / aws_region before first use — the skill's first-run setup (SKILL.md Step 0) prompts for them. Point owner_project / default_scope at a project slug that exists in your workspace (check `ls projects/`), or leave the literal string 'workspace' to write outputs at workspace level. The scripts fail fast with a clear message when a required value is missing — wrong values do not silently misroute outputs.",
+
+  "owner_project": "workspace",
+  "default_scope": "workspace",
+
+  "github_org": "",
+  "aws_profile": "",
+  "aws_region": "",
+
+  "dashboard_title": "Security Dashboard",
+  "annotations": [],
+
+  "_doc": {
+    "owner_project": "Project slug whose artifacts/security-snapshot/ holds this skill's load-bearing dashboard + snapshot history, or 'workspace'.",
+    "default_scope": "Scope used when --scope is not passed at the CLI. Resolves to <workspace>/projects/<scope>/artifacts/security-snapshot/ for a project slug, or <workspace>/artifacts/security-snapshot/ for the literal string 'workspace'.",
+    "github_org": "GitHub organization to scan (REQUIRED). All repos in the org are enumerated.",
+    "aws_profile": "AWS CLI/boto3 profile with Inspector2 + STS read access (REQUIRED). Read-only credentials recommended.",
+    "aws_region": "AWS region where Inspector V2 runs (REQUIRED).",
+    "dashboard_title": "Title shown in the dashboard header and browser tab. Optional — defaults to 'Security Dashboard'.",
+    "annotations": "Event markers rendered as vertical lines on the Trend tab. Each entry: {date: YYYYMMDD, label: text}. Optional — empty list is fine."
+  }
+}
