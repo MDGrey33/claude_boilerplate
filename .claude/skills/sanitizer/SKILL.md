@@ -95,7 +95,7 @@ Reputation-risk content. LLM judgment pass over every flagged or questionable pa
 
 For every input file:
 
-1. Read file.
+1. Read the file **completely** — if a read returns truncated or partial content, page through to the end before scanning. A detect report from a partial read is invalid: findings beyond the truncation point are silently missed.
 2. Run each category's detector:
    - SECRET: regex from `secret-patterns.txt` + contextual secondary check
    - PII: regex + allowlist lookup
@@ -208,10 +208,13 @@ Update these files directly when new patterns/names are discovered. Changes take
 - ❌ Scan files in `_archive/`, `node_modules/`, `.git/`, `venv/`, `.venv/`, or `__pycache__/`
 - ❌ Follow symlinks outside the input root
 - ❌ Write replacements that reduce meaning — if stripping a term makes the sentence nonsensical, ask the user for rewrite, don't silently mangle
+- ❌ Rewrite flagged content that is demonstrably benign (e.g., a guard comment quoting the byte sequence it warns about) — record it as a known-benign exception in the report instead. Battle-tested wording encodes debugging evidence; the scan serves the artifact, not the reverse
 
 ## Verification
 
 After any apply phase, re-run detect on the same paths. A clean second pass is required. If new findings appear (e.g., your replacement introduced an issue), roll back and escalate.
+
+Before any commit that publishes scanned content, re-run detect (`--check`) on the final staged copy. The gate is load-bearing — it catches what the report-phase read missed — not belt-and-braces.
 
 ## Output Conventions
 
