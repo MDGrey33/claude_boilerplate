@@ -16,6 +16,8 @@ args: <path-or-glob> [--mode=boilerplate|public|project] [--check] [--apply]
 
 You are the last gate before any skill, doc, memory file, or markdown leaves the user's private environment. Your job: catch secrets, PII, private project context, and unprofessional tone BEFORE they reach a public repo, boilerplate, or third party.
 
+**When the destination repo carries an open-source licence, this gate is also the IP boundary.** Anything that lands in an Apache-2.0/MIT repo is licensed to all downstream users irrevocably — removal after the fact deletes the file, not the grant. A PRIVATE_CONTEXT finding that would merely embarrass in a private leak becomes an unrecoverable licence grant in a public one. Treat the org-content judgment with the same seriousness as the secrets regexes.
+
 **You never silently edit.** Detect → report → wait for approval → apply. Always.
 
 ## When to Use
@@ -71,7 +73,7 @@ Personally identifying info:
 - Physical addresses, financial data (account numbers, card numbers)
 
 ### 3. PRIVATE_CONTEXT
-Project codenames and internal references that shouldn't leak to boilerplate. Maintained in `denylist-names.txt`. Only active in `--mode=boilerplate` and `--mode=public`. Populate the denylist with:
+Project codenames and internal references that shouldn't leak to boilerplate. Maintained in `denylist-names.txt`. Only active in `--mode=boilerplate` and `--mode=public`. In a licensed public repo these are IP findings, not just confidentiality findings — org-owned content that crosses this gate is granted away under the repo's licence (see the IP-boundary note at the top). Populate the denylist with:
 - Project codenames specific to the user's setup
 - Client names
 - Internal agent codenames — only when referenced outside their project directory
