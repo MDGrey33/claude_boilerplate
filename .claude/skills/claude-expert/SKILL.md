@@ -7,12 +7,67 @@ description: Definitive reference for how Claude Code works — disambiguates sk
 
 This skill is the **reference** for Claude Code's extension surfaces. It tells
 you which surface to pick and where to read for depth. It does not itself edit
-settings, write skills, or modify keybindings — for those, delegate to the
-existing doer skills listed at the bottom.
+settings, write skills, or modify keybindings — for those, it hands off to
+whatever lifecycle manager your setup has for that artifact type (discovered at
+invocation; see the registry below).
 
 All content is distilled from the official docs at
 [code.claude.com/docs](https://code.claude.com/docs/en/overview). When details
 here conflict with the live docs, the live docs win.
+
+## Read this as reasoning, not rules
+
+Everything below — the tables, the manager registry, the runbooks — exists to
+**sharpen** judgment, not replace it. Treat it as principles + tradeoffs, not a
+lookup table to obey or a checklist to satisfy. A handful of things are genuine
+**invariants** (hold them firm); the rest are **heuristics** (strong defaults you
+may override with stated cause). When a case doesn't fit a row, reason from the
+tradeoff the row is built on — that's why every fork states its *why*. Full
+framing + the invariant list: [reasoning.md](reasoning.md). If a "rule" here makes
+no sense for the case in front of you, that's the system failing its job — think,
+don't comply.
+
+## On invocation — tune to this setup, then check freshness (run FIRST)
+
+claude-expert adapts to **whoever installed it** rather than assuming a fixed
+layout, and keeps itself current **lazily, on use**. The instant this skill is
+invoked, before answering:
+
+1. **Discover the environment.** Run
+   `bash "$(dirname "$0")/discover-setup.sh"` — or, from the skill dir,
+   `bash discover-setup.sh`. It introspects `$HOME/.claude` and the project
+   `./.claude` (read-only, fail-soft) and emits a greppable `KEY=VALUE` map:
+   installed skills + agents, configured hooks, which **artifact-type manager**
+   exists vs is a gap, the staging dir for self-update reports, and the path to a
+   local Python reimplementation of Claude Code if one is present. Use that map to
+   route to *this user's* managers — never assume a manager name without checking
+   it `PRESENT`.
+
+2. **Check freshness (lazy gate).** Run `bash freshness-check.sh`.
+   - Prints **FRESH** → proceed straight to the user's request.
+   - Prints **STALE** → launch a **background** refresh subagent, then
+     **immediately continue with the user's actual task in parallel — do not wait**:
+
+     ```
+     Agent(subagent_type: "general-purpose", run_in_background: true,
+       description: "claude-expert freshness refresh",
+       prompt: "Execute the freshness runbook in self-update.md. Research the
+         official changelog + code.claude.com/docs/en/* DIRECTLY via WebSearch/WebFetch
+         (never a research skill — it nests) since the date in latest.md. VERIFY each
+         version against the canonical changelog. AUTO-APPLY only verified ADDITIVE
+         facts to latest.md. PROPOSE any decision-impacting change into STAGING_DIR
+         (from discover-setup.sh) — never edit decision logic. On completion:
+         run freshness-check.sh stamp (it writes .last-research + clears the lock
+         in this skill's own dir, wherever installed). Fail closed.")
+     ```
+
+This is **fire-and-forget**: the refresh writes its own results to `latest.md`
+and the staging dir. Do not block on it; surface its result only if it flags a
+`DECISION-IMPACTING` proposal. The gate self-locks (a STALE result claims a 2-hour
+lock) so concurrent invocations never double-spawn, and `.last-research` bumps to
+today on completion so it won't re-trigger for 7 days. Full design:
+[self-update.md](self-update.md). Both scripts use `$HOME`, never a hardcoded path,
+and are read-only except for creating the staging dir.
 
 ## Decision tree — which surface?
 
@@ -32,12 +87,16 @@ The full per-goal lookup is below it. The short form of the primary table:
 | Ship a bundle (skills + agents + hooks + MCP) to a team | **Plugin** | [surfaces/plugins.md](surfaces/plugins.md) |
 | Block or auto-approve a tool call | **Permission rule** or **PreToolUse hook** | [surfaces/permissions.md](surfaces/permissions.md) |
 | Build a standalone agent outside the CLI (Python/TS) | **Agent SDK** | [surfaces/agent-sdk.md](surfaces/agent-sdk.md) |
-| Run recurring or scheduled work | **`/loop`**, **CronCreate**, Routines, Desktop scheduled tasks | [surfaces/background-tasks.md](surfaces/background-tasks.md) |
+| Run recurring or scheduled work | **`/loop`** (session), **`/schedule`** Routines (cloud), local scheduled tasks | [decision-forks.md](decision-forks.md) · [surfaces/background-tasks.md](surfaces/background-tasks.md) |
+| React to an external event instead of polling | **Channels** (`--channels`) | [latest.md](latest.md) |
+| Keep working until a condition is met (not on an interval) | **`/goal`** | [latest.md](latest.md) |
 | Rebind a keyboard shortcut | **Keybindings** (`~/.claude/keybindings.json`) | [surfaces/keybindings.md](surfaces/keybindings.md) |
 | Understand what loads into context and when | **Context management** | [surfaces/context-management.md](surfaces/context-management.md) |
 | Use Claude Code in VS Code / JetBrains / Desktop / web | **IDE integration** | [surfaces/ide-integrations.md](surfaces/ide-integrations.md) |
 
 ## Short summaries of each surface
+
+*(Two surfaces were added in 2026 — **Channels** (event push into a session) and **LSP servers in plugins** — plus **`/goal`** for until-done loops and **`auto`** permission mode replacing `--dangerously-skip-permissions`. See [latest.md](latest.md).)*
 
 ### Skills
 A `SKILL.md` file (markdown + YAML frontmatter) at
@@ -126,8 +185,8 @@ first match wins. Tool rules like `Bash(git commit *)`, `Read(./.env)`,
 `/loop [interval] [prompt]` — session-scoped recurring prompt (7-day
 expiry). `CronCreate`/`CronList`/`CronDelete` — session-scoped Claude-callable
 tools using 5-field cron expressions. `/schedule` or Routines — cloud-run,
-survive machine off. Desktop scheduled tasks — local, survive session close.
-See [surfaces/background-tasks.md](surfaces/background-tasks.md).
+survive machine off. Local scheduled tasks — survive session close. See
+[surfaces/background-tasks.md](surfaces/background-tasks.md).
 
 ### Context management
 Skill descriptions = 1% of context window / 8,000 char fallback budget
@@ -150,56 +209,123 @@ namespaces (`chat:submit`, `app:interrupt`, etc.). Chord syntax:
 `ctrl+x ctrl+s`. Reserved: `Ctrl+C`, `Ctrl+D`, `Ctrl+M`. Hot-reloaded. See
 [surfaces/keybindings.md](surfaces/keybindings.md).
 
-## Delegation — claude-expert is the reference, not the editor
+## Decision forks — pick the right surface (quick rules)
 
-This skill answers "what is X" and "where should Y live". To actually change
-the system, delegate:
+The five load-bearing choices, one line each — these are tradeoffs to reason about,
+not lookups. The one-liners are the common case; when yours doesn't fit, reason from
+the *why* in [decision-forks.md](decision-forks.md). The symptom→right-surface catalog
+is in [anti-patterns.md](anti-patterns.md). Of the five, only **(b) destructive guards
+belong in a deny hook** is an invariant; the rest are strong defaults.
 
-| Task | Delegate to |
-|:--|:--|
-| Write/update a skill, archive an old one, reorganize skills | `skills-manager` |
-| Edit `~/.claude/settings.json`, `.claude/settings.json`, add permission rules (allow/ask/deny), add/edit hooks, configure env vars | `update-config` |
-| Edit `~/.claude/keybindings.json` | `keybindings-help` |
-| Check MCP server health | `mcp-doctor` |
-| Build a prioritized permission allowlist from transcripts | `fewer-permission-prompts` (bundled) |
+a. **Skill vs subagent** — reusable/interactive/inline → **skill**; verbose/isolated/parallel/tool-restricted → **subagent**. A skill's body stays resident all session (re-paid every turn); a subagent returns ~1–2k tokens but starts cold, can't do quick back-and-forth, and **can't nest**.
+b. **Guard a destructive action** *(the lone invariant)* — "X must NEVER happen, even under bypass" → **PreToolUse deny hook**, never memory/skill. A `permissionDecision:"deny"` hook fires *before* the permission check and survives `--dangerously-skip-permissions`; memory is only guidance. Match inside the script and **fail closed**.
+c. **Don't let a hook hinder** — scope with `matcher` + `if`; keep `UserPromptSubmit` trivial (30s cap); use `async`/`asyncRewake` for slow work; parse `stop_hook_active` (Stop hooks are force-overridden after 8 consecutive blocks).
+d. **When to package a plugin** — standalone `.claude/` while you iterate; convert to a **plugin** the moment share / version / reuse-across-projects appears. Only `plugin.json` lives in `.claude-plugin/`; components sit at plugin root.
+e. **Recurring work** — session poll → **`/loop`**; survives machine-off → **`/schedule` Routine** (cloud, min 1h, billed); local files + survives session close → **local scheduled task**; event-driven → **Channels**; until-done → **`/goal`**.
 
-Say it plain: claude-expert teaches the map; the doer skills drive the car.
+## The manager registry — discovered, not assumed
+
+claude-expert is the **router**; the convention is that each artifact type has a
+dedicated **manager** skill that owns its lifecycle (review-first, archive-don't-delete,
+ask-before-changing). claude-expert picks the surface and hands off — it never edits.
+
+**This roster is not hardcoded.** Which managers actually exist depends on what
+*your* setup installed. At invocation, `discover-setup.sh` reports a `MANAGERS`
+section: for each artifact TYPE it detects whether a managing skill is `PRESENT`
+or a `GAP`, by conventional name AND by scanning skill descriptions for
+"`<type> ... manager`". **Route to a manager only if discovery reports it present;
+if it's a GAP, say so and fall back to the relevant `surfaces/*.md` plus a
+settings-writing skill.** Conventional names below are *examples of what to look
+for*, not a guarantee any are installed. Full framing, the gap-handling rules, and
+cross-cutting conventions: [managers.md](managers.md) + the live `discover-setup.sh` map.
+
+| Artifact type | Conventional manager name(s) to look for | Trigger |
+|:--|:--|:--|
+| Skills / slash commands | `skills-manager` | add/update/review a skill |
+| Subagents | `agent-manager` | add/edit/review an agent |
+| Hooks | `hooks-manager` | "run X every time", "block Y", hook review |
+| Loops (`/loop`, session) | `loops-manager` | "poll X", "/loop", "what loops are running" |
+| Schedules (Routines, cron, scheduled tasks) | `schedules-manager` | "run nightly/weekly", "list my routines" |
+| Plugins / marketplaces | `plugins-manager` | "package as a plugin", "install a plugin" |
+| Logs / telemetry | `logs-manager` | "rotate/prune logs", "what writes this log" |
+| Memory (`MEMORY.md`, auto-memory) | `memory-manager` | "clean/audit/promote memory" |
+| MCP health / lifecycle | `mcp-doctor` / `mcp-manager` | "check MCP", add/remove a server |
+| Settings / permissions | `update-config` | "allow X", "set env", "from now on when X" |
+| Keybindings | `keybindings-help` | "rebind", "change submit key" |
+| Secrets / credentials | `key-manager` | "store/rotate/audit a key" |
+| Files / substrate | a file/substrate manager (e.g. `file-keeper`) | "where does this live" |
+| Cost / context | a cost/context auditor | "audit cost", "sessions feel slow" |
+
+Any manager **checks claude-expert when the surface is genuinely ambiguous** (not as
+a ritual for obvious cases), and any manager that writes settings **delegates the
+write to a settings skill** (e.g. `update-config`). Say it plain: claude-expert
+teaches the map; the managers drive the cars — and they're drivers, not
+rule-followers. See [reasoning.md](reasoning.md).
 
 ## How to use this skill
 
-- **Free-form question:** "How do hooks differ from memory?" → claude-expert
-  points you to [surfaces/hooks.md](surfaces/hooks.md) and
-  [surfaces/memory.md](surfaces/memory.md), or answers from the summary if the
-  answer is short.
+- **Free-form question:** "How do hooks differ from memory?" → points you to
+  [surfaces/hooks.md](surfaces/hooks.md) + [surfaces/memory.md](surfaces/memory.md),
+  or answers from the summary if it's short.
 - **Which-surface question:** "Where should I put a rule that blocks `rm -rf`?"
-  → claude-expert points you to PreToolUse deny or a `deny` permission rule,
-  then delegates writing it to `update-config`.
-- **Scoped arg:** Pass a surface name: `/claude-expert hooks` opens the hooks
-  reference; `/claude-expert settings` opens settings; etc. (claude-expert
-  reads the file and brings it into context.)
-- **For doing:** don't let claude-expert edit. Ask it which surface, then
-  delegate to the doer.
+  → PreToolUse deny / `deny` permission rule, then delegates the write to a
+  settings/hooks manager (if discovery reports one).
+- **Scoped arg:** Pass a surface name — `/claude-expert hooks` opens the hooks
+  reference, `/claude-expert settings` opens settings, etc.
+- **For doing:** don't let claude-expert edit. Ask which surface, then delegate
+  to the discovered doer.
 
-## Answer protocol — docs first
+## Answer protocol — docs first, source second
 
 When answering "how does Claude Code actually do X":
 
 1. **Read the relevant `surfaces/<topic>.md`** for the distilled doc answer.
 2. **If that's sufficient, answer and stop.** Cite `code.claude.com/docs`.
 3. **If the surface file is silent, ambiguous, or flagged `(docs unclear —
-   verify before relying on this)`**, follow the live docs at
-   [code.claude.com/docs](https://code.claude.com/docs/en/overview) and the
-   SDK repos (`anthropics/claude-agent-sdk-*`).
-4. **Delegate deep doc reads to the `Explore` subagent** to keep main context clean.
+   verify before relying on this)`**, escalate under the hood, in order:
+   a. the **official open SDK repos** (`anthropics/claude-agent-sdk-python`,
+      `anthropics/claude-agent-sdk-typescript`) for SDK behavior;
+   b. a **local open-source Python reimplementation** of Claude Code if one is
+      installed — `discover-setup.sh` reports its path as `PYTHON_PORT` (e.g. a
+      clone of the open SafeRL-Lab Python reimplementation). If absent, the map
+      prints how to clone it. Use it for under-the-hood mechanism checks;
+   c. a **live reproduction** in a throwaway dir (run the actual CLI and observe).
+4. **Cite source findings distinctly** — e.g.
+   `Source (open SDK repo): claude-agent-sdk-python/.../file.py:Lxx` or
+   `Source (live repro): observed behavior of <command>`. Do not blur these with
+   doc citations; reimplementations and snapshots may drift from the shipped CLI.
+5. **Delegate deep greps to the `Explore` subagent** to keep main context clean.
+
+This protocol — knowing when to go past the docs to the open source or a live
+repro — is what makes this skill an "expert" rather than a wiki. It relies only on
+official open repos, a discovered open reimplementation, and direct reproduction —
+never on any private or closed source tree.
 
 ## Pointer
 
-Full disambiguation table: [decision-tree.md](decision-tree.md).
-Community patterns, routing rules, catalog pointers: [patterns.md](patterns.md).
-Common failure modes with fixes: [pitfalls.md](pitfalls.md).
+- Judgment over rules (read first — the hub principle): [reasoning.md](reasoning.md)
+- On-invocation discovery + freshness: `discover-setup.sh`, `freshness-check.sh`
+- Decision forks (full tables + failure modes): [decision-forks.md](decision-forks.md)
+- Anti-pattern catalog (wrong → right surface): [anti-patterns.md](anti-patterns.md)
+- Manager registry (discovery-based roster, gaps): [managers.md](managers.md)
+- Latest & best practices (auto-updated): [latest.md](latest.md) · Self-update protocol: [self-update.md](self-update.md)
+- Full disambiguation table: [decision-tree.md](decision-tree.md) · Patterns: [patterns.md](patterns.md) · Failure modes: [pitfalls.md](pitfalls.md)
 
 ## Version / freshness
 
-Based on docs read 2026-04. `docs.claude.com/en/docs/claude-code/*`
-301-redirects to `code.claude.com/docs/en/*`. Agent SDK docs live on
+See [latest.md](latest.md) for the live freshness date — the self-update bumps it
+there. The 2026 baseline absorbed Channels, LSP-in-plugins, `/goal`, `auto` mode,
+~29 hook events, the slash-commands→skills merge, and the three-surface scheduling
+model.
+
+This skill keeps itself current via a **bounded, gated self-update** with two
+triggers — a **lazy on-invocation check** (`freshness-check.sh`: if it hasn't
+researched in ≥7 days it spawns a background refresh and answers your task in
+parallel) plus an optional **scheduled backstop**. Both append additive facts to
+[latest.md](latest.md) and propose any decision-logic change into the staging dir
+(reported by `discover-setup.sh`) — never rewriting the decision logic unprompted.
+See [self-update.md](self-update.md).
+
+`docs.claude.com/en/docs/claude-code/*` now 301-redirects to
+`code.claude.com/docs/en/*`. Agent SDK docs live on
 `code.claude.com/docs/en/agent-sdk/*` (formerly `platform.claude.com`).
