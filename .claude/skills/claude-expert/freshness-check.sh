@@ -24,7 +24,8 @@ fi
 
 now=$(date +%s)
 last_date=$(cat "$STAMP" 2>/dev/null || echo "1970-01-01")
-last=$(date -j -f "%Y-%m-%d" "$last_date" +%s 2>/dev/null || echo 0)
+# Portable epoch parse: BSD/macOS (`date -j -f`) first, then GNU/Linux (`date -d`), else 0.
+last=$(date -j -f "%Y-%m-%d" "$last_date" +%s 2>/dev/null || date -d "$last_date" +%s 2>/dev/null || echo 0)
 age=$(( (now - last) / 86400 ))
 
 # Respect a fresh in-progress lock.
