@@ -25,7 +25,8 @@ WS="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 [ -f "$WS/.claude/.workspace" ] || fail "Workspace marker not found at $WS/.claude/.workspace — is this skill deployed inside a v2 workspace?"
 
 # ── Resolve scope from config.json + optional --scope flag ─────────────────────
-SCOPE="$(python3 -c "import json,sys; print(json.load(open('$SCRIPT_DIR/config.json'))['default_scope'])")"
+SCOPE="$(python3 -c "import json,sys; print(json.load(open('$SCRIPT_DIR/config.json'))['default_scope'])" 2>/dev/null)" \
+  || fail "Cannot read default_scope from $SCRIPT_DIR/config.json — file missing, malformed JSON, or key absent. Run /security-snapshot first-run setup."
 while [ $# -gt 0 ]; do
   case "$1" in
     --scope)    SCOPE="$2"; shift 2 ;;
@@ -75,7 +76,8 @@ gh auth status --hostname github.com &>/dev/null \
   || fail "gh not authenticated. Run: gh auth login"
 ok "gh CLI authenticated"
 
-AWS_PROFILE_CFG="$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/config.json')).get('aws_profile',''))")"
+AWS_PROFILE_CFG="$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/config.json')).get('aws_profile',''))" 2>/dev/null)" \
+  || fail "Cannot read aws_profile from $SCRIPT_DIR/config.json — file missing or malformed JSON."
 [ -n "$AWS_PROFILE_CFG" ] \
   || fail "aws_profile not set in $SCRIPT_DIR/config.json — run /security-snapshot once for first-run setup, or edit the file."
 aws sts get-caller-identity --profile "$AWS_PROFILE_CFG" &>/dev/null \

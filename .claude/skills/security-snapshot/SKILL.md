@@ -113,6 +113,7 @@ The skill installs what it can; only authentication is delegated to the user.
 Read `aws_profile` from `$SCRIPT_DIR/config.json`, then run in parallel:
 
 ```bash
+AWS_PROFILE="$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/config.json'))['aws_profile'])")"
 python3 -c "import boto3; print('boto3 ok')"
 gh auth status
 aws sts get-caller-identity --profile "$AWS_PROFILE"
@@ -198,7 +199,7 @@ If only one snapshot exists (first run): note "First run — no previous snapsho
 
 Present as a compact delta table:
 
-```
+```text
 Delta vs YYYY-MM-DD
 ───────────────────────────────
 Secrets         148  →  148  (no change)
@@ -215,7 +216,7 @@ Zone A pkgs      203  →  198  ↓ 5
 
 Print a final summary using `"$REPORTS_DIR"` for any paths:
 
-```
+```text
 Security Snapshot — YYYY-MM-DD
 ==============================
 Scope:          <name>
@@ -233,7 +234,10 @@ Next step:  /google-script-deploy deploy "$REPORTS_DIR"
 ```
 
 Report the count of snapshots embedded in the dashboard (from build_dashboard.py output).
-If any step was skipped due to an error, make that explicit in the summary.
+If any step was skipped due to an error, make that explicit in the summary. If the GitHub
+step reported failed repo fetches (`vuln_fetch_failures` in github-raw.json) or a partial
+scanning status (`rate_limited` / `auth_error`), list the affected repos and prompt the
+user to rerun the snapshot later to refetch them.
 
 ---
 
@@ -241,7 +245,7 @@ If any step was skipped due to an error, make that explicit in the summary.
 
 If the user invoked the skill with `--deploy`, invoke the deployment skill at the end:
 
-```
+```text
 /google-script-deploy deploy "$REPORTS_DIR"
 ```
 

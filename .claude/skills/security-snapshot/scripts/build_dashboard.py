@@ -10,8 +10,10 @@ Usage:
     python3 build_dashboard.py              # auto-detect latest correlation-*.json
     python3 build_dashboard.py correlation-20260512.json
 
-Output: security-dashboard.html (self-contained; works on file://, web server,
-        and Google Apps Script HtmlService)
+Output: security-dashboard.html — single file, all snapshot data embedded
+        (no backend); chart and font libraries load from CDN, so rendering
+        needs internet access. Works on file://, web server, and Google Apps
+        Script HtmlService.
 """
 import argparse
 import json
@@ -74,11 +76,23 @@ def date_slug(path: Path) -> str:
 
 def extract(corr_path: Path, reports_dir: Path) -> dict:
     corr_data  = load(corr_path)
-    # inputs are siblings of corr_path inside the same dated folder
-    insp_path  = corr_path.parent / corr_data.get("inputs", {}).get("inspector", "")
-    gh_path    = corr_path.parent / corr_data.get("inputs", {}).get("github", "")
-    insp_raw   = load(insp_path) if insp_path.exists() else {}
-    gh_raw     = load(gh_path)   if gh_path.exists()   else {}
+    # Inputs are siblings of corr_path inside the same dated folder. Missing
+    # siblings are a hard error: falling back to {} would mint a zeroed
+    # snapshot into the immutable trend history instead of surfacing that the
+    # input set is incomplete.
+    inputs     = corr_data.get("inputs", {})
+    insp_name  = inputs.get("inspector")
+    gh_name    = inputs.get("github")
+    if not insp_name or not gh_name:
+        sys.exit(f"error: {corr_path} does not name its raw input files — regenerate the correlation")
+    insp_path  = corr_path.parent / insp_name
+    gh_path    = corr_path.parent / gh_name
+    missing    = [p.name for p in (insp_path, gh_path) if not p.is_file()]
+    if missing:
+        sys.exit(f"error: missing sibling input(s) next to {corr_path.name}: {', '.join(missing)} — "
+                 "refusing to build a zeroed dashboard")
+    insp_raw   = load(insp_path)
+    gh_raw     = load(gh_path)
     corr       = corr_data.get("correlation", {})
     gh_vuln    = gh_raw.get("vuln_agg", {})
     totals     = insp_raw.get("account_totals", {})
@@ -1221,11 +1235,14 @@ function renderTrend() {
       scales: {
         x: { grid: { color: '#334155' }, ticks: { color: '#e2e8f0', font: { size: 11 } } },
         y: {
-          type: 'logarithmic',
+          // Linear, not logarithmic: these series are expected to reach 0
+          // (that's the success state) and Chart.js log axes cannot plot 0.
+          type: 'linear',
+          beginAtZero: true,
           grid: { color: '#334155' },
           ticks: { color: '#94a3b8', font: { size: 10 },
                    callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v },
-          title: { display: true, text: 'Open Alerts (log scale)', color: '#94a3b8', font: { size: 11 } },
+          title: { display: true, text: 'Open Alerts', color: '#94a3b8', font: { size: 11 } },
         },
       },
       plugins: {
@@ -1280,11 +1297,14 @@ function renderGhSeverityChart(labels, annots) {
       scales: {
         x: { grid: { color: '#334155' }, ticks: { color: '#e2e8f0', font: { size: 11 } } },
         y: {
-          type: 'logarithmic',
+          // Linear, not logarithmic: these series are expected to reach 0
+          // (that's the success state) and Chart.js log axes cannot plot 0.
+          type: 'linear',
+          beginAtZero: true,
           grid: { color: '#334155' },
           ticks: { color: '#94a3b8', font: { size: 10 },
                    callback: v => v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v },
-          title: { display: true, text: 'Open Alerts (log scale)', color: '#94a3b8', font: { size: 11 } },
+          title: { display: true, text: 'Open Alerts', color: '#94a3b8', font: { size: 11 } },
         },
       },
       plugins: {

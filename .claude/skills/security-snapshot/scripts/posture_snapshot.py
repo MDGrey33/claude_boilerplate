@@ -55,6 +55,7 @@ def _require(cfg: dict, key: str) -> str:
 
 try:
     import boto3
+    from botocore.config import Config
     from botocore.exceptions import ClientError
 except ImportError:
     sys.exit("boto3 not installed: pip install boto3")
@@ -73,13 +74,24 @@ KERNEL_PKGS = {"linux", "linux-libc-dev", "linux-headers"}
 
 def inspector_client():
     session = boto3.Session(profile_name=PROFILE, region_name=REGION)
-    return session.client("inspector2")
+    # Adaptive retries absorb transient Inspector throttling so it rarely
+    # surfaces as a ClientError at all (see paginate_aggregations for what
+    # happens when one does).
+    return session.client("inspector2", config=Config(retries={"mode": "adaptive", "max_attempts": 8}))
 
 
 # ── Aggregation helpers ───────────────────────────────────────────────────────
 
-def paginate_aggregations(c, agg_type, agg_request, max_results=100):
-    """Page through list_finding_aggregations, returning all responses."""
+def paginate_aggregations(c, agg_type, agg_request, max_results=100, required=True):
+    """
+    Page through list_finding_aggregations, returning all responses.
+
+    `required` sections fail the run on ClientError rather than continuing
+    with partial pages: these aggregations feed the account-wide headline
+    numbers and the immutable snapshot history, and a mid-pagination failure
+    yields a count that looks complete while silently under-reporting.
+    Optional sections (display-only) warn and degrade instead.
+    """
     results = []
     kwargs = {
         "aggregationType": agg_type,
@@ -90,7 +102,10 @@ def paginate_aggregations(c, agg_type, agg_request, max_results=100):
         try:
             resp = c.list_finding_aggregations(**kwargs)
         except ClientError as e:
-            print(f"  WARN: {agg_type} aggregation failed: {e}", file=sys.stderr)
+            if required:
+                sys.exit(f"error: {agg_type} aggregation failed after {len(results)} pages — "
+                         f"refusing to report partial account-wide numbers; rerun the snapshot: {e}")
+            print(f"  WARN: {agg_type} aggregation failed — section degraded: {e}", file=sys.stderr)
             break
         results.extend(resp.get("responses", []))
         token = resp.get("nextToken")
@@ -186,8 +201,10 @@ def get_layer_stats(responses):
         by_hash[h]["c"] += sc.get("critical", 0)
         by_hash[h]["h"] += sc.get("high", 0)
         by_hash[h]["m"] += sc.get("medium", 0)
-        by_hash[h]["repos"].add(l.get("repository", ""))
-        by_hash[h]["images"].add(l.get("resourceId", ""))
+        if l.get("repository"):
+            by_hash[h]["repos"].add(l["repository"])
+        if l.get("resourceId"):
+            by_hash[h]["images"].add(l["resourceId"])
 
     result = [
         {
@@ -378,8 +395,9 @@ def main():
     args = parser.parse_args()
 
     c = inspector_client()
-    ts        = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    date_slug = datetime.now(timezone.utc).strftime("%Y%m%d")
+    now       = datetime.now(timezone.utc)   # one clock read — ts and date_slug must agree across midnight
+    ts        = now.strftime("%Y-%m-%d %H:%M UTC")
+    date_slug = now.strftime("%Y%m%d")
 
     # Account ID derived at runtime — keeps it out of source while still
     # appearing in reports and the dashboard header.
@@ -409,6 +427,7 @@ def main():
         c, "IMAGE_LAYER",
         {"imageLayerAggregation": {"sortBy": "ALL", "sortOrder": "DESC"}},
         max_results=100,
+        required=False,   # display-only section — degrade rather than fail
     )
     base_layers = get_layer_stats(layer_responses)
     print(f"   {len(base_layers)} dominant layers identified", flush=True)
@@ -430,6 +449,7 @@ def main():
         c, "AMI",
         {"amiAggregation": {"sortBy": "AFFECTED_INSTANCES", "sortOrder": "DESC"}},
         max_results=20,
+        required=False,   # display-only section — degrade rather than fail
     )
 
     print("→ coverage counts ...", flush=True)

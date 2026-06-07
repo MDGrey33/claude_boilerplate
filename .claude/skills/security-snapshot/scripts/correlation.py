@@ -167,7 +167,16 @@ def build_github_index(raw: dict) -> dict:
 # ── Three-zone correlation ────────────────────────────────────────────────────
 
 def correlate(insp: dict, gh: dict) -> dict:
-    """Produce three-zone analysis joining Inspector × GitHub on CVE or package."""
+    """
+    Produce three-zone analysis joining Inspector × GitHub on CVE or package.
+
+    Zones join on bare CVE deliberately, not on (package, CVE): Inspector names
+    OS/container packages (deb/apk) while Dependabot names manifest packages
+    (npm/pip), so the same CVE rarely shares a package name across the two
+    sources — a pair-wise join would collapse Zone A to near-empty and misreport
+    genuine cross-source visibility of the same vulnerability. The package-level
+    view is computed separately (zone_a_pkgs / pkg_overlap below).
+    """
 
     insp_cves = set(insp["by_cve"].keys())
     gh_cves   = set(gh["by_cve"].keys())
@@ -443,10 +452,17 @@ def build_offender_convergence(repo_ranking: list[dict], top_n: int = 15) -> lis
     Repos that rank in the top tier across multiple signal categories.
     A repo scoring in top-15 on 3+ signals is the highest-priority fix target.
     """
-    insp_top  = {r["repo"] for r in sorted(repo_ranking, key=lambda x: (-(x["insp_crit"]+x["insp_high"]), x["repo"]))[:top_n]}
-    gh_top    = {r["repo"] for r in sorted(repo_ranking, key=lambda x: (-(x["gh_crit"]+x["gh_high"]),     x["repo"]))[:top_n]}
-    cs_top    = {r["repo"] for r in sorted(repo_ranking, key=lambda x: (-x["code_scanning"],              x["repo"]))[:top_n]}
-    ss_top    = {r["repo"] for r in sorted(repo_ranking, key=lambda x: (-x["secrets"],                    x["repo"]))[:top_n]}
+    def top_set(score) -> set:
+        # Only repos with a positive count in the signal qualify — slicing the
+        # full ranking would pad small orgs' top lists with zero-count repos and
+        # mint convergence badges no scanner actually issued.
+        scored = [r for r in repo_ranking if score(r) > 0]
+        return {r["repo"] for r in sorted(scored, key=lambda x: (-score(x), x["repo"]))[:top_n]}
+
+    insp_top  = top_set(lambda x: x["insp_crit"] + x["insp_high"])
+    gh_top    = top_set(lambda x: x["gh_crit"] + x["gh_high"])
+    cs_top    = top_set(lambda x: x["code_scanning"])
+    ss_top    = top_set(lambda x: x["secrets"])
 
     result = []
     for r in repo_ranking:

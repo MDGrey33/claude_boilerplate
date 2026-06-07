@@ -52,12 +52,42 @@ GH        = "gh"         # gh CLI binary; must be authenticated
 
 # ── gh helpers ────────────────────────────────────────────────────────────────
 
+GH_TIMEOUT = 120  # seconds per gh call — a stalled network/auth call must not hang the snapshot
+
+
+def _gh_run(cmd: list[str]) -> subprocess.CompletedProcess:
+    """subprocess.run wrapper: every gh call gets a timeout."""
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=GH_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"gh call timed out after {GH_TIMEOUT}s: {' '.join(cmd[:3])} ...")
+
+
+def _classify_gh_error(err: str) -> int:
+    """
+    Map gh error output to a status code. 403 is reserved for true scope/permission
+    problems: GitHub also answers HTTP 403 for rate limiting and SSO enforcement,
+    and callers treat 403 as "token lacks security_events scope" — misclassifying
+    a rate-limited run as a scope gap would make an incomplete snapshot look expected.
+    """
+    low = err.lower()
+    if "rate limit" in low:
+        return 429
+    if "bad credentials" in low or "sso" in low or "saml" in low or "401" in err:
+        return 401
+    if "must have admin rights" in low or "not accessible" in low or "oauth scope" in low or "403" in err:
+        return 403
+    if "not found" in low or "404" in err:
+        return 404
+    return 500
+
+
 def gh_graphql(query: str, variables: dict | None = None) -> dict:
     cmd = [GH, "api", "graphql", "-f", f"query={query}"]
     if variables:
         for k, v in variables.items():
             cmd += ["-F", f"{k}={v}"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = _gh_run(cmd)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip())
     return json.loads(result.stdout)
@@ -77,14 +107,9 @@ def gh_rest_paginated(path: str, params: dict | None = None) -> tuple[int, list]
         qp["per_page"] = qp.get("per_page", "100")
         qp["page"] = str(page)
         url = f"{path}?{urlencode(qp)}"
-        result = subprocess.run([GH, "api", url], capture_output=True, text=True)
+        result = _gh_run([GH, "api", url])
         if result.returncode != 0:
-            err = result.stderr + result.stdout
-            if "403" in err or "Must have admin rights" in err:
-                return 403, []
-            if "404" in err or "Not Found" in err:
-                return 404, []
-            return 500, []
+            return _classify_gh_error(result.stderr + result.stdout), []
         try:
             data = json.loads(result.stdout)
         except json.JSONDecodeError:
@@ -96,25 +121,6 @@ def gh_rest_paginated(path: str, params: dict | None = None) -> tuple[int, list]
             break    # last page
         page += 1
     return 200, all_items
-
-
-def gh_rest(path: str, params: dict | None = None) -> tuple[int, dict | list]:
-    """Single-page GET (probe use only). Embeds params in URL query string."""
-    from urllib.parse import urlencode
-    qp = dict(params or {})
-    url = f"{path}?{urlencode(qp)}" if qp else path
-    result = subprocess.run([GH, "api", url], capture_output=True, text=True)
-    if result.returncode != 0:
-        err = result.stderr + result.stdout
-        if "403" in err or "Must have admin rights" in err:
-            return 403, {}
-        if "404" in err or "Not Found" in err:
-            return 404, {}
-        return 500, {}
-    try:
-        return 200, json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return 200, []
 
 
 # ── Step 1: list all repos ────────────────────────────────────────────────────
@@ -221,60 +227,66 @@ def get_vuln_details(org: str, repo: str) -> list[dict]:
     return alerts
 
 
-# ── Step 3: code scanning (needs security_events) ────────────────────────────
+# ── Steps 3+4: code scanning + secret scanning (need security_events) ─────────
+
+def _scan_all_repos(org: str, repos: list[str], endpoint: str, label: str,
+                    parse) -> tuple[str, list[dict]]:
+    """
+    Iterate every repo against /repos/{org}/{repo}/{endpoint}, aggregating alerts.
+    Scanning availability is per-repo (404 = not enabled on that repo), so org-wide
+    state is never concluded from a single probe. Short-circuits only when the first
+    few repos ALL return 403 (token genuinely lacks the scope — every repo would
+    fail the same way) or on rate-limit / auth failure (further calls just burn
+    the limit against a dead token).
+    """
+    if not repos:
+        return "no_repos", []
+    alerts: list[dict] = []
+    statuses: list[int] = []
+    for i, repo in enumerate(repos, 1):
+        print(f"   {label} [{i}/{len(repos)}] {repo}", flush=True)
+        s, items = gh_rest_paginated(f"/repos/{org}/{repo}/{endpoint}", {"state": "open"})
+        statuses.append(s)
+        if s == 200:
+            alerts.extend(parse(repo, a) for a in items)
+        elif s == 429:
+            print(f"   WARN: rate limited at {repo} — aborting {label} scan, results are partial",
+                  file=sys.stderr)
+            return "rate_limited", alerts
+        elif s == 401:
+            print(f"   WARN: authentication failed at {repo} — aborting {label} scan, results are partial",
+                  file=sys.stderr)
+            return "auth_error", alerts
+        if i >= 5 and not alerts and all(x == 403 for x in statuses):
+            return "no_scope", []
+    if any(s == 200 for s in statuses):
+        return "ok", alerts
+    if all(s == 403 for s in statuses):
+        return "no_scope", []
+    return "not_enabled", []
+
 
 def get_code_scanning(org: str, repos: list[str]) -> tuple[str, list[dict]]:
-    """Returns (status, alerts). Probes first repo; skips if unavailable."""
-    sample = repos[0] if repos else None
-    if not sample:
-        return "no_repos", []
-    status, _ = gh_rest(f"/repos/{org}/{sample}/code-scanning/alerts", {"state": "open", "per_page": "1"})
-    if status != 200:
-        return "no_scope" if status == 403 else "not_enabled", []
+    """Returns (status, alerts) across all repos."""
+    return _scan_all_repos(org, repos, "code-scanning/alerts", "cs", lambda repo, a: {
+        "repo":      repo,
+        "rule_id":   a.get("rule", {}).get("id"),
+        "severity":  a.get("rule", {}).get("severity"),
+        "tool":      a.get("tool", {}).get("name"),
+        "state":     a.get("state"),
+        "created":   a.get("created_at"),
+    })
 
-    all_alerts = []
-    for i, repo in enumerate(repos, 1):
-        print(f"   cs [{i}/{len(repos)}] {repo}", flush=True)
-        s, items = gh_rest_paginated(f"/repos/{org}/{repo}/code-scanning/alerts", {"state": "open"})
-        if s != 200:
-            continue
-        for a in items:
-            all_alerts.append({
-                "repo":      repo,
-                "rule_id":   a.get("rule", {}).get("id"),
-                "severity":  a.get("rule", {}).get("severity"),
-                "tool":      a.get("tool", {}).get("name"),
-                "state":     a.get("state"),
-                "created":   a.get("created_at"),
-            })
-    return "ok", all_alerts
-
-
-# ── Step 4: secret scanning ───────────────────────────────────────────────────
 
 def get_secret_scanning(org: str, repos: list[str]) -> tuple[str, list[dict]]:
-    """Returns (status, alerts). Probes first repo; skips if unavailable."""
-    sample = repos[0] if repos else None
-    if not sample:
-        return "no_repos", []
-    status, _ = gh_rest(f"/repos/{org}/{sample}/secret-scanning/alerts", {"state": "open", "per_page": "1"})
-    if status != 200:
-        return "no_scope" if status == 403 else "not_enabled", []
-
-    all_alerts = []
-    for repo in repos:
-        s, items = gh_rest_paginated(f"/repos/{org}/{repo}/secret-scanning/alerts", {"state": "open"})
-        if s != 200:
-            continue
-        for a in items:
-            all_alerts.append({
-                "repo":        repo,
-                "secret_type": a.get("secret_type"),
-                "state":       a.get("state"),
-                "created":     a.get("created_at"),
-                "resolved":    a.get("resolved_at"),
-            })
-    return "ok", all_alerts
+    """Returns (status, alerts) across all repos."""
+    return _scan_all_repos(org, repos, "secret-scanning/alerts", "ss", lambda repo, a: {
+        "repo":        repo,
+        "secret_type": a.get("secret_type"),
+        "state":       a.get("state"),
+        "created":     a.get("created_at"),
+        "resolved":    a.get("resolved_at"),
+    })
 
 
 # ── Aggregation ───────────────────────────────────────────────────────────────
@@ -352,12 +364,21 @@ def build_report(raw: dict) -> str:
     va  = raw.get("vuln_agg", {})
     cs_status  = raw.get("code_scanning_status", "unknown")
     ss_status  = raw.get("secret_scanning_status", "unknown")
-    scope_note = ""
-    if cs_status == "no_scope" or ss_status == "no_scope":
-        scope_note = (
-            "\n> **Code scanning and/or secret scanning unavailable**: "
-            "add `security_events` scope to the GitHub token to enable these.\n"
-        )
+    notes = []
+    if "no_scope" in (cs_status, ss_status):
+        notes.append("> **Code scanning and/or secret scanning unavailable**: "
+                     "add `security_events` scope to the GitHub token to enable these.")
+    if "rate_limited" in (cs_status, ss_status):
+        notes.append("> **GitHub API rate limit hit mid-scan** — scanning counts below are "
+                     "partial; rerun after the limit resets.")
+    if "auth_error" in (cs_status, ss_status):
+        notes.append("> **Authentication failed mid-scan** (token expiry / SSO) — scanning "
+                     "counts below are partial; re-authenticate and rerun.")
+    fails = raw.get("vuln_fetch_failures", [])
+    if fails:
+        notes.append(f"> **Vulnerability data missing for {len(fails)} repo(s)**: "
+                     f"{', '.join(fails)} — counts undercount these; rerun to refetch.")
+    scope_note = ("\n" + "\n".join(notes) + "\n") if notes else ""
 
     lines = [
         "# GitHub Security Snapshot",
@@ -477,8 +498,9 @@ def main():
     args = parser.parse_args()
     org = args.org
 
-    ts        = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    date_slug = datetime.now(timezone.utc).strftime("%Y%m%d")
+    now       = datetime.now(timezone.utc)   # one clock read — ts and date_slug must agree across midnight
+    ts        = now.strftime("%Y-%m-%d %H:%M UTC")
+    date_slug = now.strftime("%Y%m%d")
 
     # Step 1: list repos
     print(f"→ listing repos for {org} ...", flush=True)
@@ -490,13 +512,26 @@ def main():
     # Step 2: vulnerability alert details
     print("→ fetching vulnerability alert details ...", flush=True)
     all_vuln = []
+    failed_repos: list[str] = []
     for i, repo in enumerate(repos_with_alerts, 1):
         print(f"   [{i}/{len(repos_with_alerts)}] {repo}", flush=True)
         try:
             all_vuln.extend(get_vuln_details(org, repo))
         except Exception as e:
+            failed_repos.append(repo)
             print(f"   WARN: {repo} failed: {e}", flush=True)
     print(f"   {len(all_vuln)} vulnerability alerts fetched", flush=True)
+    if failed_repos:
+        # Partial data is acceptable only when it is loudly partial: the failures
+        # travel with the artefact (raw + report) so downstream consumers see the
+        # gap, and the user is prompted to refetch. Past ~10% the undercount would
+        # make headline numbers misleading — refuse to mint that snapshot.
+        print(f"\n⚠ vulnerability fetch FAILED for {len(failed_repos)}/{len(repos_with_alerts)} repos: "
+              f"{', '.join(failed_repos)}\n  Counts undercount these repos — rerun later to refetch.",
+              file=sys.stderr)
+        if len(failed_repos) > 0.10 * len(repos_with_alerts):
+            sys.exit("error: >10% of repos failed vulnerability fetch — refusing to save a "
+                     "misleading snapshot; rerun when GitHub is reachable")
     vuln_agg = aggregate_vuln(all_vuln)
 
     # Step 3: code scanning
@@ -519,6 +554,7 @@ def main():
         "code_scanning":          cs_alerts,
         "secret_scanning_status": ss_status,
         "secret_scanning":        ss_alerts,
+        "vuln_fetch_failures":    failed_repos,
         # Store full alert list for correlation with Inspector data
         "vuln_alerts_detail":     all_vuln,
     }
