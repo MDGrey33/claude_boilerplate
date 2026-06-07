@@ -43,7 +43,7 @@ A v2 boilerplate is identified by the marker file `.claude/skills/setup-workspac
 ### Prerequisites
 
 - The boilerplate cloned to a folder OUTSIDE the intended workspace (e.g., `~/src/claude_boilerplate/`).
-- The target workspace folder exists (`mkdir -p ~/workspace` if needed).
+- The target workspace folder need not exist — init creates it (missing parents included).
 - Confirm workspace and source paths with the user before invoking the script (the agent reads the values from script output and asks).
 
 ### Dry run

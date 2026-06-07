@@ -15,7 +15,6 @@ Persistent memory and session management for Claude Code, with a pluggable seman
 
 ```bash
 git clone https://github.com/MDGrey33/claude_boilerplate.git ~/src/claude_boilerplate
-mkdir -p ~/workspace
 cd ~/src/claude_boilerplate
 claude
 # in the session: /setup-workspace init --workspace ~/workspace
