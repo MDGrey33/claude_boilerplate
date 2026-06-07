@@ -209,3 +209,9 @@ See `auto-memory/README.md` for the full description.
 ### Modifying memory structure
 
 The memory files are plain markdown. Add new files or sections as needed. Update `/hello` and `/bye` skills if you add files they should read/write.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE). Redistributions must retain the [NOTICE](NOTICE) file.
+
+A practical note for anyone running this boilerplate inside an organization: the `/sanitizer` gate on upstream contributions is not just a privacy control — anything merged into this repo is licensed to all downstream users irrevocably. Scrub org-specific content before it crosses that boundary; removal after the fact deletes the file, not the grant.

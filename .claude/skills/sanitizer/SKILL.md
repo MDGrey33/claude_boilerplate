@@ -16,6 +16,8 @@ args: <path-or-glob> [--mode=boilerplate|public|project] [--check] [--apply]
 
 You are the last gate before any skill, doc, memory file, or markdown leaves the user's private environment. Your job: catch secrets, PII, private project context, and unprofessional tone BEFORE they reach a public repo, boilerplate, or third party.
 
+**When the destination repo carries an open-source licence, this gate is also the IP boundary.** Anything that lands in an Apache-2.0/MIT repo is licensed to all downstream users irrevocably — removal after the fact deletes the file, not the grant. A PRIVATE_CONTEXT finding that would merely embarrass in a private leak becomes an unrecoverable licence grant in a public one. Treat the org-content judgment with the same seriousness as the secrets regexes.
+
 **You never silently edit.** Detect → report → wait for approval → apply. Always.
 
 ## When to Use
@@ -71,7 +73,7 @@ Personally identifying info:
 - Physical addresses, financial data (account numbers, card numbers)
 
 ### 3. PRIVATE_CONTEXT
-Project codenames and internal references that shouldn't leak to boilerplate. Maintained in `denylist-names.txt`. Only active in `--mode=boilerplate` and `--mode=public`. Populate the denylist with:
+Project codenames and internal references that shouldn't leak to boilerplate. Maintained in `denylist-names.txt`. Only active in `--mode=boilerplate` and `--mode=public`. In a licensed public repo these are IP findings, not just confidentiality findings — org-owned content that crosses this gate is granted away under the repo's licence (see the IP-boundary note at the top). Populate the denylist with:
 - Project codenames specific to the user's setup
 - Client names
 - Internal agent codenames — only when referenced outside their project directory
@@ -93,7 +95,7 @@ Reputation-risk content. LLM judgment pass over every flagged or questionable pa
 
 For every input file:
 
-1. Read file.
+1. Read the file **completely** — if a read returns truncated or partial content, page through to the end before scanning. A detect report from a partial read is invalid: findings beyond the truncation point are silently missed.
 2. Run each category's detector:
    - SECRET: regex from `secret-patterns.txt` + contextual secondary check
    - PII: regex + allowlist lookup
@@ -206,10 +208,13 @@ Update these files directly when new patterns/names are discovered. Changes take
 - ❌ Scan files in `_archive/`, `node_modules/`, `.git/`, `venv/`, `.venv/`, or `__pycache__/`
 - ❌ Follow symlinks outside the input root
 - ❌ Write replacements that reduce meaning — if stripping a term makes the sentence nonsensical, ask the user for rewrite, don't silently mangle
+- ❌ Rewrite flagged content that is demonstrably benign (e.g., a guard comment quoting the byte sequence it warns about) — record it as a known-benign exception in the report instead. Battle-tested wording encodes debugging evidence; the scan serves the artifact, not the reverse
 
 ## Verification
 
 After any apply phase, re-run detect on the same paths. A clean second pass is required. If new findings appear (e.g., your replacement introduced an issue), roll back and escalate.
+
+Before any commit that publishes scanned content, re-run detect (`--check`) on the final staged copy. The gate is load-bearing — it catches what the report-phase read missed — not belt-and-braces.
 
 ## Output Conventions
 
