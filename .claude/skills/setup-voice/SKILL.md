@@ -1,6 +1,6 @@
 ---
 name: setup-voice
-description: Install a local neural voice interface for Claude Code on macOS Apple Silicon. Wires mlx-whisper (STT) + Kokoro TTS (offline neural voices) into voice-claude and vtranscribe CLI scripts. Two voice contexts — personal (af_heart) and tech (af_bella). No cloud APIs, no API keys.
+description: Install a local neural voice interface for Claude Code on macOS Apple Silicon. Wires mlx-whisper (STT) + Kokoro TTS (offline neural voices) into voice-claude and vtranscribe CLI scripts. Two voice contexts — personal (af_heart) and tech (af_bella). Multi-session safe — concurrent sessions speak in turn (global lock) and announce their name. No cloud APIs, no API keys.
 user_invocable: true
 ---
 
@@ -85,6 +85,11 @@ Create `~/bin/kokoro-say` with the content below, then `chmod +x ~/bin/kokoro-sa
 # Usage: kokoro-say [-v VOICE] "text"
 #   Voices: af_heart (personal/default)  af_bella (tech)
 #           af_sky  bf_emma  bf_isabella  am_adam  am_michael
+#
+# Multi-session safe: when several Claude Code sessions speak at once, playback
+# is serialized by a global lock so they never overlap, and each utterance is
+# prefixed with the session's short name (see kokoro-session-name) so you can
+# tell which session is talking.
 set -euo pipefail
 
 VOICE="${KOKORO_VOICE:-af_heart}"
@@ -101,6 +106,16 @@ shift $((OPTIND - 1))
 TEXT="${*}"
 if [[ -z "$TEXT" ]]; then
   read -r -d '' TEXT || true
+fi
+
+# Prefix this session's short name so concurrent sessions are distinguishable
+# when speaking. Empty when no name can be resolved — set KOKORO_SESSION_NAME to
+# force one, or KOKORO_NO_NAME=1 to suppress the prefix entirely.
+if [[ "${KOKORO_NO_NAME:-0}" != "1" ]] && command -v kokoro-session-name >/dev/null 2>&1; then
+  SESSION_NAME="$(kokoro-session-name 2>/dev/null || true)"
+  if [[ -n "$SESSION_NAME" ]]; then
+    TEXT="${SESSION_NAME}. ${TEXT}"
+  fi
 fi
 
 TMP=$(mktemp /tmp/kokoro.XXXXXX.wav)
@@ -120,13 +135,111 @@ samples, sr = kokoro.create(text, voice=voice, speed=1.0, lang="en-us")
 sf.write(outfile, samples, sr)
 PYEOF
 
-afplay "$TMP"
+# Serialize playback across ALL sessions via a global advisory lock so two
+# sessions never speak over each other. fcntl.flock auto-releases when this
+# process exits (even on crash / Ctrl-C), so a dead session can't wedge the
+# queue. Synthesis above already ran in parallel; only audible playback waits.
+KOKORO_PLAY_WAV="$TMP" /usr/bin/python3 - << 'PYEOF'
+import fcntl, os, subprocess, time
+
+wav     = os.environ["KOKORO_PLAY_WAV"]
+lockf   = os.environ.get("KOKORO_LOCK", "/tmp/kokoro-say.lock")
+timeout = float(os.environ.get("KOKORO_LOCK_TIMEOUT", "90"))
+
+f = open(lockf, "w")
+deadline = time.time() + timeout
+while True:
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        break
+    except BlockingIOError:
+        if time.time() >= deadline:
+            break  # queue stuck too long: play anyway rather than drop response
+        time.sleep(0.1)
+
+subprocess.run(["afplay", wav])
+# Lock released automatically when this process exits and the fd closes.
+PYEOF
 ```
 
 **Verify:**
 
 ```bash
 kokoro-say "Hello, voice interface ready."
+```
+
+---
+
+## Step 4b — Create `kokoro-session-name`
+
+This helper resolves the short name `kokoro-say` speaks before each utterance.
+It is optional — without it, `kokoro-say` simply adds no prefix. Create
+`~/bin/kokoro-session-name`, then `chmod +x ~/bin/kokoro-session-name`.
+
+Resolution order: `$KOKORO_SESSION_NAME` (explicit, any terminal) → the current
+[cmux](https://cmux.io) tab title (automatic, when running under cmux) → empty.
+
+```
+#!/usr/bin/env bash
+# Resolve a short spoken name for the CURRENT session, used by kokoro-say to
+# prefix speech so concurrent sessions don't blur together. Resolution order:
+#   1. $KOKORO_SESSION_NAME              explicit override (works in any terminal)
+#   2. cmux tab title via $CMUX_PANEL_ID automatic, when running under cmux
+#   3. (empty)                           kokoro-say then adds no prefix
+# Always exits 0; never blocks kokoro-say on failure.
+set -uo pipefail
+
+MAXLEN="${KOKORO_NAME_MAXLEN:-22}"
+
+if [[ -n "${KOKORO_SESSION_NAME:-}" ]]; then
+  printf '%s\n' "${KOKORO_SESSION_NAME:0:$MAXLEN}"
+  exit 0
+fi
+
+# cmux persists each tab/panel (incl. its auto-derived title) in a session JSON,
+# keyed by the panel id that cmux exports as $CMUX_PANEL_ID.
+CMUX_JSON="${CMUX_SESSION_JSON:-$HOME/Library/Application Support/cmux/session-com.cmuxterm.app.json}"
+if [[ -n "${CMUX_PANEL_ID:-}" && -f "$CMUX_JSON" ]]; then
+  MAXLEN="$MAXLEN" PANEL_ID="$CMUX_PANEL_ID" python3 - "$CMUX_JSON" <<'PY' 2>/dev/null
+import json, os, re, sys
+
+panel_id = os.environ.get("PANEL_ID", "")
+maxlen   = int(os.environ.get("MAXLEN", "22"))
+try:
+    data = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+
+found = {"title": None}
+def walk(o):
+    if isinstance(o, dict):
+        if o.get("id") == panel_id and o.get("title"):
+            found["title"] = o["title"]
+        for v in o.values():
+            walk(v)
+    elif isinstance(o, list):
+        for v in o:
+            walk(v)
+walk(data)
+
+# Strip leading status glyph / spinner / punctuation, keep first real text.
+raw = re.sub(r"^[^\w]+", "", found["title"] or "").strip()
+if not raw:
+    sys.exit(0)
+if len(raw) > maxlen:        # shorten on a word boundary
+    cut = raw[:maxlen]
+    if " " in cut:
+        cut = cut[:cut.rfind(" ")]
+    raw = cut.rstrip()
+print(raw)
+PY
+fi
+```
+
+**Verify:**
+
+```bash
+KOKORO_SESSION_NAME="Alpha" kokoro-say "naming works"   # says: Alpha. naming works
 ```
 
 ---
@@ -341,6 +454,11 @@ Runs `vtranscribe` inline so the transcript lands directly in the conversation.
 | `VC_MODEL` | `mlx-community/whisper-turbo` | Whisper model |
 | `WHISPER_MODEL` | `mlx-community/whisper-turbo` | For `vtranscribe` |
 | `KOKORO_VOICE` | `af_heart` | For `kokoro-say` direct calls |
+| `KOKORO_SESSION_NAME` | (cmux title) | Name `kokoro-say` speaks before each utterance |
+| `KOKORO_NO_NAME` | `0` | Set `1` to suppress the session-name prefix |
+| `KOKORO_NAME_MAXLEN` | `22` | Max length of the spoken session name |
+| `KOKORO_LOCK` | `/tmp/kokoro-say.lock` | Global playback lock (shared by all sessions) |
+| `KOKORO_LOCK_TIMEOUT` | `90` | Seconds to wait for the lock before playing anyway |
 
 ---
 
