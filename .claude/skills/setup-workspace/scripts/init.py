@@ -82,9 +82,7 @@ def is_v2_boilerplate(p: Path) -> bool:
 
 def resolve_workspace(workspace_arg: str) -> Path:
     p = Path(workspace_arg).expanduser().resolve()
-    if not p.exists():
-        die(f"workspace path does not exist: {p}\nhint: create it first, e.g., `mkdir -p {p}`.")
-    if not p.is_dir():
+    if p.exists() and not p.is_dir():
         die(f"workspace path is not a directory: {p}")
     return p
 
@@ -132,6 +130,10 @@ def validate_layout(workspace: Path, source: Path) -> None:
 
 def create_dirs(created: list, skipped: list) -> None:
     ws = workspace()
+    if not ws.exists():
+        if not is_dry_run():
+            ws.mkdir(parents=True, exist_ok=True)
+        created.append("workspace root")
     for d in ROOT_DIRS:
         path = ws / d
         if path.exists():
