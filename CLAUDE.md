@@ -37,6 +37,13 @@ Project layout:
 
 See `.claude/docs/agent-guardrails.md` for operational principles.
 
+Agents live in `.claude/agents/` (deployed + synced like skills):
+
+| Agent | Purpose |
+|-------|---------|
+| `research-expert` | Parallel web-research specialist behind `/research`; gathers corroborated evidence from multiple independent sources and writes a report to keep the caller's context small. |
+| `boilerplate-guardian` | Read-only PR reviewer that guards this boilerplate's spirit while enabling contributions — full code review + philosophy alignment + skill-table parity, with a plain-words merge recommendation and staged (never auto-posted) comments. Run on request or on a schedule. |
+
 ## Prerequisites
 
 Run `/setup-workspace init --workspace <path>` to initialise a workspace (see README for the sibling-layout requirement). A semantic-memory backend is optional — run `/setup-cognee` or `/setup-wikibase` after the workspace is verified end-to-end (see `.claude/docs/memory-systems.md` to choose).
