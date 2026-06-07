@@ -1,0 +1,10 @@
+# Author identity unification.
+# Maps historical author name/email pairs to a canonical identity so
+# `git shortlog`, `git log --use-mailmap`, and GitHub contributor stats
+# display one entry per person. History on disk is preserved as-is.
+#
+# Format: Canonical Name <canonical-email> Commit Name <commit-email>
+# See `man gitmailmap` for the full grammar.
+
+itsoneohone <itsoneohone@proton.me> oneohone <itsoneohone@proton.me>
+itsoneohone <itsoneohone@proton.me> itsoneohone <138209743+itsoneohone@users.noreply.github.com>
