@@ -78,6 +78,15 @@ Semantic memory (optional): markdown memory works with no extra setup. For seman
 
 Each skill works independently too. Use `/lessons "always use type hints"` or `/mcp-doctor` anytime.
 
+## Agents
+
+Specialist subagents in `.claude/agents/` (deployed + synced like skills):
+
+| Agent | Purpose |
+|-------|---------|
+| `research-expert` | Parallel web-research specialist behind `/research` — gathers corroborated evidence from multiple independent sources and writes a self-contained report to keep the caller's context window small. |
+| `boilerplate-guardian` | Read-only guardian of the boilerplate's spirit. Reviews open PRs (full code review + philosophy alignment + skill-table parity) and returns a clear, reasoned merge recommendation with staged review comments — it never posts or merges; a human approves. Run on request or on a recurring schedule. |
+
 ## Contributing Back to the Boilerplate
 
 Lessons learned in individual projects can flow back to improve the shared boilerplate — without leaking project-specific details.
