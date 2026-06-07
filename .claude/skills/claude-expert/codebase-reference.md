@@ -50,8 +50,8 @@ Escalate in order. Stop as soon as you have a confident, citable answer.
 - **Not found** → discovery reports `PYTHON_PORT=not found`. To enable tier-4 under-the-hood verification, clone the open SafeRL-Lab Python reimplementation of Claude Code:
 
   ```bash
-  git clone https://github.com/SafeRL-Lab/nano-claude-code "$HOME/code/nano-claude-code"
-  # then re-run discover-setup.sh, or export CLAUDE_PYTHON_PORT=$HOME/code/nano-claude-code
+  git clone https://github.com/SafeRL-Lab/cheetahclaws "$HOME/code/cheetahclaws"   # formerly nano-claude-code
+  # then re-run discover-setup.sh, or export CLAUDE_PYTHON_PORT=$HOME/code/cheetahclaws
   ```
 
   This is an open, community-maintained reimplementation (also branded *CheetahClaws*) — a readable Python rebuild of Claude Code's core loop with multi-provider support. It is independent of Anthropic and is *not* the shipped CLI; use it as a pedagogical reference, not a behavioral guarantee.

@@ -14,7 +14,7 @@ claude-expert is a reference, and a stale reference is a *dangerous* reference �
 fact about a model, a price, or a surface is worse than a missing one. So the skill keeps
 itself fresh with a **bounded, gated** self-update: additive knowledge auto-applies;
 anything that changes how the skill *decides* is held for **you**. (These invariants
-sharpen judgment, they aren't a checklist — see `patterns.md` and `pitfalls.md`; when a
+sharpen judgment, they aren't a checklist — see `reasoning.md`; when a
 case doesn't fit, reason from the tradeoff.)
 
 The three invariants this protocol keeps firm:
@@ -78,25 +78,25 @@ report is a *staging* artifact for your review, and `STAGING_DIR` is the only pl
 
 ## What auto-applies vs what gates
 
-The data file the auto-apply path is allowed to touch is the skill's **freshness/version
-fact sheet** (the file that holds the dated "as-of" facts — in this boilerplate, the
-version facts inside `patterns.md` / the relevant surface file, plus the report's own date
-stamp). The decision files — `decision-tree.md`, `pitfalls.md`, the surface
-recommendations, and any manager roster the discovery step assembles — are **off-limits to
-automation**.
+The **only** file the auto-apply path may write is **`latest.md`** — the inert,
+purpose-built freshness/version fact sheet (the dated "as-of" facts), plus the report's own
+date stamp. Everything that encodes *judgment* is off-limits to automation: the decision
+forks (`decision-forks.md` and the four-way table in `decision-tree.md`), the surface
+recommendations (`SKILL.md` + `surfaces/*`), the anti-pattern verdicts (`anti-patterns.md`),
+and any manager roster the discovery step assembles (`managers.md`).
 
 | Change class | Action | Rationale |
 |:--|:--|:--|
-| **ADDITIVE** | Auto-append the new cited fact to the freshness/version fact sheet and bump its date stamp. | New facts *with citations* are low-risk and reversible (invariant 3). Verify the cite first (invariant 2). |
+| **ADDITIVE** | Auto-append the new cited fact to **`latest.md`** (the freshness/version fact sheet) and bump its date stamp. | New facts *with citations* are low-risk and reversible (invariant 3). Verify the cite first (invariant 2). |
 | **CORRECTION** (a stated fact is now false) | Auto-fix the specific fact **only after confirming the new value against the canonical changelog (invariant 2)**; if unverifiable, GATE it. Flag every correction loudly in the freshness report. | A wrong fact is worse than a missing one, so the fix itself must be verified — and it is logged, never silent. |
-| **DECISION-IMPACTING** (alters a fork in `decision-tree.md`, a "right surface" recommendation, the manager roster, or a `pitfalls.md` verdict) | **GATE — propose only, never auto-apply.** Write the proposed diff into the freshness report and stop. | This is the skill's *judgment*, not its data. Automation never rewrites judgment (invariant 1); a scheduled task silently rewriting decision logic is uncontrolled self-modification. |
+| **DECISION-IMPACTING** (alters a fork in `decision-forks.md` / `decision-tree.md`, a "right surface" recommendation, the manager roster in `managers.md`, or an `anti-patterns.md` verdict) | **GATE — propose only, never auto-apply.** Write the proposed diff into the freshness report and stop. | This is the skill's *judgment*, not its data. Automation never rewrites judgment (invariant 1); a scheduled task silently rewriting decision logic is uncontrolled self-modification. |
 | **UNCLASSIFIED** | Write the delta into the report marked `needs you`; apply nothing. | Fail closed. |
 
 ## Safety rationale — no uncontrolled self-modification
 
-- **Bounded surface.** The auto-apply path touches **only** the freshness/version fact
-  sheet and its date stamp. It **cannot** rewrite `decision-tree.md`, `pitfalls.md`, the
-  surface recommendations, or the manager roster without your review — those are the
+- **Bounded surface.** The auto-apply path touches **only** `latest.md` and its date
+  stamp. It **cannot** rewrite `decision-forks.md`, `anti-patterns.md`, `decision-tree.md`,
+  the surface recommendations, or `managers.md` without your review — those are the
   load-bearing parts a wrong edit would corrupt.
 - **Staging, not curated.** Proposals are written to the discovered `STAGING_DIR`, never
   promoted directly into any reviewed/curated tier. Whatever promotion flow your setup uses
@@ -138,9 +138,8 @@ Run the claude-expert self-update runbook (see the skill's `self-update.md`):
    `.last-research`, **directly with WebSearch/WebFetch** (no nested research skill).
 4. Write `claude-expert-freshness-<today>.md` into `STAGING_DIR`, classifying every delta
    ADDITIVE / CORRECTION / DECISION-IMPACTING / UNCLASSIFIED.
-5. Apply ONLY verified ADDITIVE facts (and verified CORRECTIONs) to the freshness/version
-   fact sheet; bump its date stamp. GATE everything DECISION-IMPACTING — propose in the
-   report, apply nothing.
+5. Apply ONLY verified ADDITIVE facts (and verified CORRECTIONs) to `latest.md`; bump its
+   date stamp. GATE everything DECISION-IMPACTING — propose in the report, apply nothing.
 6. Stamp by running `freshness-check.sh stamp` (writes `.last-research` + clears the lock
    in the skill's own dir, wherever installed) so the lazy on-invocation check reads FRESH.
 ```
