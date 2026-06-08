@@ -15,7 +15,7 @@ Owns workspace lifecycle: `init` (first-time setup), `add-project` (register a p
 
 ## Workspace conventions
 
-- **Sibling layout.** The boilerplate source clone and the workspace live at sibling paths — for example, `~/src/claude_boilerplate/` and `~/workspace/`. Source must NOT live inside the workspace, and the workspace must NOT live inside the source. `init` refuses if the layout is wrong.
+- **Sibling layout.** The boilerplate source clone and the workspace live at sibling paths — for example, `~/src/memnyx/` and `~/workspace/`. Source must NOT live inside the workspace, and the workspace must NOT live inside the source. `init` refuses if the layout is wrong.
 - **Init runs once from the source clone.** After init, the user works from the workspace; the source clone stays around for `/setup-workspace sync` (upstream updates).
 - **Workspace = `cwd` for `add-project`, `sync`, and ongoing work.**
 - Per v2 design principles: skills, agents, identity, brag log, MCP server configs, and the project registry all live in the workspace.
@@ -31,7 +31,7 @@ Before init, the workspace's `.claude/skills/` is empty — `/setup-workspace` d
 ### Invocation
 
 ```
-cd ~/src/claude_boilerplate          # or wherever you cloned it
+cd ~/src/memnyx          # or wherever you cloned it
 claude
 /setup-workspace init --workspace ~/workspace
 ```
@@ -42,7 +42,7 @@ A v2 boilerplate is identified by the marker file `.claude/skills/setup-workspac
 
 ### Prerequisites
 
-- The boilerplate cloned to a folder OUTSIDE the intended workspace (e.g., `~/src/claude_boilerplate/`).
+- The boilerplate cloned to a folder OUTSIDE the intended workspace (e.g., `~/src/memnyx/`).
 - The target workspace folder need not exist — init creates it (missing parents included).
 - Confirm workspace and source paths with the user before invoking the script (the agent reads the values from script output and asks).
 
@@ -157,7 +157,7 @@ Update upstream-owned content in the workspace from the source clone, and surfac
 
 ### When to use
 
-After the user pulls upstream changes into the source clone (e.g., `cd ~/src/claude_boilerplate && git pull`) and wants those changes reflected in the workspace.
+After the user pulls upstream changes into the source clone (e.g., `cd ~/src/memnyx && git pull`) and wants those changes reflected in the workspace.
 
 ### Inputs
 

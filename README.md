@@ -16,8 +16,8 @@ Persistent memory and session management for Claude Code, with a pluggable seman
 ## Quick Start
 
 ```bash
-git clone https://github.com/MDGrey33/claude_boilerplate.git ~/src/claude_boilerplate
-cd ~/src/claude_boilerplate
+git clone https://github.com/MDGrey33/memnyx.git ~/src/memnyx
+cd ~/src/memnyx
 claude
 # in the session: /setup-workspace init --workspace ~/workspace
 # exit, then start all future sessions from ~/workspace
