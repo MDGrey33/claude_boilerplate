@@ -128,10 +128,20 @@ Ask the user:
 - **Project title** — shown in the Apps Script editor, e.g. "Security Dashboard"
 - **Timezone** — IANA name for the GAS manifest (e.g. `Europe/London`). Offer the system
   timezone (`readlink /etc/localtime` or `$TZ`) as the default rather than asking cold.
-- **Access level** — who can view the deployed web app?
-  - `ANYONE_ANONYMOUS` — anyone with the link, no sign-in required ← default
-  - `ANYONE` — any Google account required
-  - `DOMAIN` — only the org's Google Workspace domain
+- **Access level** — who can view the deployed web app? (`webapp.access` in the manifest.)
+  Default to the most restricted level that meets the need and widen deliberately —
+  deployed dashboards often carry internal or sensitive data, so a public default is a
+  footgun. The four valid values:
+  - `DOMAIN` — only users in the deployer's Google Workspace domain ← default
+  - `MYSELF` — only the deploying user
+  - `ANYONE` — any logged-in Google user
+  - `ANYONE_ANONYMOUS` — any user, even not logged in (public — only for content genuinely
+    meant to be public; never for internal or sensitive dashboards)
+
+  `DOMAIN` requires the deployer to be on a Google Workspace domain; from a personal Google
+  account it doesn't apply, so use `MYSELF` (or `ANYONE` for a cross-org audience). The
+  options actually offered at deploy time may be narrower than this list — a Workspace admin
+  can disable public deployments, in which case only `MYSELF` and `DOMAIN` appear.
 
 ### Step 3 — Create the deploy directory
 
