@@ -1442,7 +1442,7 @@ def build(corr_path: Path, reports_dir: Path) -> str:
     html = html.replace("__CURRENT_DATE__", json.dumps(slug))
     html = html.replace("__TREND_SERIES__", json.dumps(trend_series))
     html = html.replace("__ANNOTATIONS__",  json.dumps(ANNOTATIONS))
-    html = html.replace("'__ORG__'",        f"'{ORG}'")
+    html = html.replace("'__ORG__'",        json.dumps(ORG))
     html = html.replace("__TITLE__",        TITLE)
     # Account/region come from the snapshot data (posture_snapshot.py derives the
     # account via STS at collection time). Legacy snapshots pre-dating that field

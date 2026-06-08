@@ -10,7 +10,9 @@ args: |
                     Default is read from scripts/config.json (default_scope).
   - --deploy        After the pipeline completes, invoke /google-script-deploy to push the
                     dashboard to Apps Script. Without this flag the dashboard is saved
-                    locally only (default).
+                    locally only (default). The dashboard is sensitive (account ID, repo
+                    names, CVEs, secret-scanning counts) — deploy access MUST be DOMAIN or
+                    stricter, never ANYONE_ANONYMOUS. See Step 8.
   If a step fails the skill stops and reports the failure — it does not continue with stale data.
 ---
 
@@ -243,6 +245,14 @@ user to rerun the snapshot later to refetch them.
 
 ## Step 8 — Optional: deploy to Apps Script (only if `--deploy` was passed)
 
+> **⚠ The dashboard is sensitive — restrict the deployment.** The HTML embeds a full
+> map of the org's security weaknesses: the AWS account ID + region, every repo name,
+> open CVEs and vulnerable packages, and per-repo secret-scanning types and counts. The
+> page renders a `CONFIDENTIAL — INTERNAL` badge on itself. When the deploy target is first
+> set up, the access level **must be `DOMAIN`** (the org's Workspace domain only) or stricter
+> — **never `ANYONE_ANONYMOUS`** (public, no sign-in). If a deployment already exists with a
+> wider access level, stop and tell the user to restrict it before proceeding.
+
 If the user invoked the skill with `--deploy`, invoke the deployment skill at the end:
 
 ```text
@@ -250,6 +260,8 @@ If the user invoked the skill with `--deploy`, invoke the deployment skill at th
 ```
 
 The deploy skill handles its own concerns (clasp checks, RAPT expiry, push, redeploy).
+Access level is set when the GAS project is first created — for this dashboard it must be
+`DOMAIN` or stricter, never `ANYONE_ANONYMOUS`.
 The `clasp-projects.json` config travels with the snapshots under `$REPORTS_DIR`, so
 the deploy skill picks up the right script ID + deployment ID automatically.
 
