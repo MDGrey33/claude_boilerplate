@@ -10,7 +10,7 @@ Three scopes, each with its own owner and location:
 |-------|----------|---------|
 | Personal | `<workspace>/me/` | Identity, team roster, brag log, growth notes |
 | Project | `<project>/.claude/memory/` + project root | Process knowledge, domain context, working state |
-| Contributions | `<workspace>/contributions/` | Generalised lessons staged for boilerplate |
+| Contributions | `<workspace>/contributions/` | Generalised lessons staged for Memnyx |
 
 Project layout:
 
@@ -42,7 +42,7 @@ Agents live in `.claude/agents/` (deployed + synced like skills):
 | Agent | Purpose |
 |-------|---------|
 | `research-expert` | Parallel web-research specialist behind `/research`; gathers corroborated evidence from multiple independent sources and writes a report to keep the caller's context small. |
-| `boilerplate-guardian` | Read-only PR reviewer that guards this boilerplate's spirit while enabling contributions — full code review + philosophy alignment + skill-table parity, with a plain-words merge recommendation and staged (never auto-posted) comments. Run on request or on a schedule. |
+| `memnyx-guardian` | Read-only PR reviewer that guards Memnyx's spirit while enabling contributions — full code review + philosophy alignment + skill-table parity, with a plain-words merge recommendation and staged (never auto-posted) comments. Run on request or on a schedule. |
 
 ## Prerequisites
 
@@ -63,8 +63,8 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 | `/collect-team-activity` | Collect a team member's daily activity (leadership roles) |
 | `/one-on-one-prep` | Synthesize a member's activity into 1:1 meeting prep |
 | `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
-| `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
-| `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
+| `/contribute` | Generalize a lesson and stage it for Memnyx contribution |
+| `/pull-contributions` | Pull generalized contributions from a project into Memnyx |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine (semantic-memory backend option) |
 | `/setup-wikibase` | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
@@ -93,7 +93,7 @@ Skills in `.claude/skills/` are **deployed copies** — maintained in the boiler
 
 To propose a skill improvement:
 1. Use `/contribute` to generalise the lesson and stage it in `<workspace>/contributions/`
-2. The boilerplate maintainer runs `/pull-contributions` to apply it
+2. The Memnyx maintainer runs `/pull-contributions` to apply it
 3. Changes land via GitHub PR and maintainer review
 
 `/skills-manager` identifies improvement opportunities during sessions and guides you through step 1.
@@ -109,7 +109,7 @@ To propose a skill improvement:
 ## Detailed Docs
 
 Refer to these files for more detail (use `@` to include them in context):
-- `.claude/docs/architecture.md` — boilerplate architecture
+- `.claude/docs/architecture.md` — Memnyx architecture
 - `.claude/docs/conventions.md` — code style and patterns
 - `.claude/docs/memory-systems.md` — how to choose a semantic-memory backend (markdown / cognee / Wikibase)
 - `.claude/docs/cognee-usage.md` — how to use cognee MCP tools for semantic memory
@@ -118,7 +118,7 @@ Refer to these files for more detail (use `@` to include them in context):
 
 ## Keeping docs in sync
 
-`README.md`, this `CLAUDE.md`, `.claude/docs/*` and each skill's `SKILL.md` are part of the boilerplate — they move in the same change as the code that affects them, not deferred. A stale doc is worse than no doc (see `<workspace>/.claude/memory/feedback_doc_maintenance_discipline.md` for the general principle; this section is the boilerplate-specific mapping).
+`README.md`, this `CLAUDE.md`, `.claude/docs/*` and each skill's `SKILL.md` are part of Memnyx — they move in the same change as the code that affects them, not deferred. A stale doc is worse than no doc (see `<workspace>/.claude/memory/feedback_doc_maintenance_discipline.md` for the general principle; this section is the Memnyx-specific mapping).
 
 | If you changed... | Update... |
 |---|---|
@@ -127,7 +127,7 @@ Refer to these files for more detail (use `@` to include them in context):
 | Setup / workflow steps a user follows | `README.md` (Quick Start), this `CLAUDE.md` (Workflow) |
 | A template under `.claude/skills/setup-workspace/templates/` | the template itself; and if structural, `init.py` or `add_project.py` `STARTER_MAP` |
 | Added / removed / renamed an **agent** | `README.md` and this `CLAUDE.md` (note the agent where relevant; agents live in `.claude/agents/`, deployed + synced like skills) |
-| An agent operating rule | `.claude/docs/agent-guardrails.md` (overwritten by `init` and `sync` — the boilerplate is the canonical source) |
+| An agent operating rule | `.claude/docs/agent-guardrails.md` (overwritten by `init` and `sync` — Memnyx is the canonical source) |
 | Architecture, lifecycle, or skill-chain wiring | `.claude/docs/architecture.md` |
 | Code style, file organisation, naming patterns | `.claude/docs/conventions.md` |
 | A new doc surface | the row above for that surface, and this table |

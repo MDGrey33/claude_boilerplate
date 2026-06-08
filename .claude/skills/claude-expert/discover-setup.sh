@@ -4,7 +4,7 @@
 # Self-tuning companion to the claude-expert skill. The skill's
 # discovery-dependent docs reference THIS script's output instead of
 # hardcoding any one person's setup, so the reference adapts to whoever
-# installs the boilerplate.
+# installs Memnyx.
 #
 # Contract: READ-ONLY introspection. The ONLY thing it may create is the
 # staging dir (see STAGING_DIR). It is $HOME-based, POSIX-ish bash, and

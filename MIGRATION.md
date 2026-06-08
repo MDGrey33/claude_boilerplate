@@ -29,5 +29,5 @@ rm -rf .claude/skills/<removed-or-old-skill-name>
 
 `/setup-nemoclaw` was removed because it instructed users to run an install
 script from a non-existent URL and carried environment-specific content unfit for
-a shared boilerplate. If you deployed it before, delete the leftover directory as
+Memnyx. If you deployed it before, delete the leftover directory as
 above.

@@ -28,9 +28,9 @@ This skill owns `<workspace>/.claude/projects-index.json`. Other skills read the
 }
 ```
 
-The project's path is **derived** by convention: `<workspace>/projects/<slug>/`. It's not stored in the registry. If a user wants the project's real dir to live elsewhere, they create a symlink at `<workspace>/projects/<slug>/` pointing at the real location — the boilerplate sees the symlink path.
+The project's path is **derived** by convention: `<workspace>/projects/<slug>/`. It's not stored in the registry. If a user wants the project's real dir to live elsewhere, they create a symlink at `<workspace>/projects/<slug>/` pointing at the real location — Memnyx sees the symlink path.
 
-The boilerplate doesn't model "topic vs repo" distinctions in the registry. That's a conceptual framing for users (personal cross-cutting work vs team-shared codebase), but the boilerplate treats every registered project identically. If you want the project committed to a remote, that's a normal git workflow — it has nothing to do with the registry.
+Memnyx doesn't model "topic vs repo" distinctions in the registry. That's a conceptual framing for users (personal cross-cutting work vs team-shared codebase), but Memnyx treats every registered project identically. If you want the project committed to a remote, that's a normal git workflow — it has nothing to do with the registry.
 
 ## Workspace resolution
 

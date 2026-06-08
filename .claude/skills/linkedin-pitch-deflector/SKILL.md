@@ -88,7 +88,7 @@ If the sender has sent **3 messages and it still isn't a pitch**, the probe clea
 
 Assertive, blanket-policy, no future hook, short (2–4 sentences). Openly automated, **keep the em-dash**. Every deflection ends with the **mirror**: the open-source toolkit that just deflected them, with an invite to upgrade their own AI setup. Slot in `{Name}` / `{Company}` (omit `{Company}` if you can't read it).
 
-Boilerplate URL to include: **https://github.com/MDGrey33/claude_boilerplate**
+Memnyx URL to include: **https://github.com/MDGrey33/claude_boilerplate**
 
 Templates:
 

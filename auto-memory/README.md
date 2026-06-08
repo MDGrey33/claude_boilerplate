@@ -1,6 +1,6 @@
 # Auto-Memory System (Optional)
 
-A user-scope, typed-atomic-file memory system that complements the boilerplate's project-scope memory.
+A user-scope, typed-atomic-file memory system that complements Memnyx's project-scope memory.
 
 > **TL;DR:** Run `/setup-auto-memory` from any project to wire it into your `~/.claude/`. Nothing changes until you do.
 
@@ -10,7 +10,7 @@ Claude Code's built-in auto-memory directory (`~/.claude/projects/<slug>/memory/
 
 ## How it differs from project memory
 
-| | Project memory (already in boilerplate) | Auto-memory (this package) |
+| | Project memory (already in Memnyx) | Auto-memory (this package) |
 |---|---|---|
 | Scope | Inside the repo (`repo/.claude/memory/`) | Per-project user dir (`~/.claude/projects/<slug>/memory/`) |
 | Shared with collaborators | Yes — committed to git | No — local to this user |
@@ -65,7 +65,7 @@ auto-memory/
 
 ## Uninstall
 
-To remove: delete `~/.claude/skills/memory-hygiene/` and `~/.claude/projects/<slug>/memory/`. Roll back the CLAUDE.md fragment with `git diff` if you spliced it. The boilerplate's project-scope memory is unaffected — this package never touches it.
+To remove: delete `~/.claude/skills/memory-hygiene/` and `~/.claude/projects/<slug>/memory/`. Roll back the CLAUDE.md fragment with `git diff` if you spliced it. Memnyx's project-scope memory is unaffected — this package never touches it.
 
 ## See also
 

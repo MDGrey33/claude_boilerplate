@@ -107,7 +107,7 @@ Scaffold a project under `<workspace>/projects/<slug>/` and register it via `/pr
   mkdir <workspace>/projects/<slug>                       # fresh project
   ln -s /path/to/repo <workspace>/projects/<slug>         # symlink existing
   ```
-  Keeps the boilerplate out of physical placement decisions.
+  Keeps Memnyx out of physical placement decisions.
 
 ### Dry run
 
@@ -153,7 +153,7 @@ The script handles validation, idempotent scaffolding, template substitution, an
 
 ## `sync`
 
-Update upstream-owned content in the workspace from the source clone, and surface any new starter files (memory entries, identity templates, etc.) that have been added to the boilerplate since init. Conservative — detects local changes and asks for consent before overwriting.
+Update upstream-owned content in the workspace from the source clone, and surface any new starter files (memory entries, identity templates, etc.) that have been added to Memnyx since init. Conservative — detects local changes and asks for consent before overwriting.
 
 ### When to use
 
@@ -199,6 +199,6 @@ Default mode (no `--apply` flags) prints the plan only.
 
 - **Idempotent.** Re-running any action is safe.
 - **Never overwrite user content.** CLAUDE.md, MEMORY.md, lessons-learned.md, identity, brag log, growth, gitignore, settings.json — once present, stay as the user has them.
-- **Init overwrites upstream-owned content; sync asks.** Skills, agents, agent-guardrails.md are the boilerplate's contract — `init` overwrites them unconditionally (first-time setup, no local edits to protect). `sync` is conservative: detects local edits and asks the user before overwriting (workspace has evolved since init).
+- **Init overwrites upstream-owned content; sync asks.** Skills, agents, agent-guardrails.md are Memnyx's contract — `init` overwrites them unconditionally (first-time setup, no local edits to protect). `sync` is conservative: detects local edits and asks the user before overwriting (workspace has evolved since init).
 - **Refuse, don't guess.** If the source can't be uniquely identified, fail with a clear hint rather than picking arbitrarily.
 - **No project scaffolding here.** That's `/setup-workspace add-project`'s job, not `init`'s.

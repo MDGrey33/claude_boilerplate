@@ -98,7 +98,7 @@ You are wrapping up the current working session. Summarize, persist, and hand of
 
 11. **Store in cognee** (if available): If the cognee MCP is loaded, call `cognee_add` with the session summary text, then `cognee_cognify` to integrate it into the knowledge graph for future semantic retrieval.
 
-12. **Suggest contributions**: If any lessons from this session seem broadly useful beyond this scope, mention that the user can run `/contribute` to generalize and stage them for the boilerplate.
+12. **Suggest contributions**: If any lessons from this session seem broadly useful beyond this scope, mention that the user can run `/contribute` to generalize and stage them for Memnyx.
 
 13. **Output farewell**:
 
