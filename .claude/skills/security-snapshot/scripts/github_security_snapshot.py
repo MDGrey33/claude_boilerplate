@@ -257,13 +257,19 @@ def _scan_all_repos(org: str, repos: list[str], endpoint: str, label: str,
             print(f"   WARN: authentication failed at {repo} — aborting {label} scan, results are partial",
                   file=sys.stderr)
             return "auth_error", alerts
-        if i >= 5 and not alerts and all(x == 403 for x in statuses):
-            return "no_scope", []
-    if any(s == 200 for s in statuses):
-        return "ok", alerts
-    if all(s == 403 for s in statuses):
+    # Decide on the FULL repo set (no early short-circuit — denied repos early in
+    # the list must not stop us querying readable ones later). Status meaning:
+    #   200 = scanned   403 = denied (alerts may exist but are hidden — a real gap)
+    #   404 = scanning not enabled on that repo (expected; nothing to undercount)
+    if 403 in statuses and 200 not in statuses:
+        # Every accessible repo was denied → token lacks the scope org-wide.
         return "no_scope", []
-    return "not_enabled", []
+    if 403 in statuses:
+        # Some repos scanned, others denied → loud partial signal.
+        return "partial_permissions", alerts
+    if 200 in statuses:
+        return "ok", alerts
+    return "not_enabled", []   # all 404 — scanning simply not enabled anywhere
 
 
 def get_code_scanning(org: str, repos: list[str]) -> tuple[str, list[dict]]:
@@ -368,6 +374,9 @@ def build_report(raw: dict) -> str:
     if "no_scope" in (cs_status, ss_status):
         notes.append("> **Code scanning and/or secret scanning unavailable**: "
                      "add `security_events` scope to the GitHub token to enable these.")
+    if "partial_permissions" in (cs_status, ss_status):
+        notes.append("> **Some repos denied (403) during scanning** — counts below are partial; "
+                     "check repo-level permissions and rerun once access is granted.")
     if "rate_limited" in (cs_status, ss_status):
         notes.append("> **GitHub API rate limit hit mid-scan** — scanning counts below are "
                      "partial; rerun after the limit resets.")
