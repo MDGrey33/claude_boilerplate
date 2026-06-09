@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 .DS_Store
 .venv/
+# Real per-deployment org values overlay the committed config.json template.
+# Never commit; never synced. See SKILL.md Step 0.
+scripts/config.local.json

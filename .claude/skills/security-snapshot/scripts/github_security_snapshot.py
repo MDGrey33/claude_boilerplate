@@ -23,28 +23,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def _resolve_reports_dir(args) -> Path:
-    """Where to read/write snapshot artefacts. --reports-dir > $SECURITY_SNAPSHOT_REPORTS_DIR > error."""
-    raw = args.reports_dir or os.environ.get("SECURITY_SNAPSHOT_REPORTS_DIR")
-    if not raw:
-        sys.exit("error: pass --reports-dir <path> or set SECURITY_SNAPSHOT_REPORTS_DIR")
-    return Path(raw).expanduser().resolve()
-
-
-def _load_config() -> dict:
-    """Org-specific settings live in config.json next to this script."""
-    path = Path(__file__).parent / "config.json"
-    if not path.exists():
-        sys.exit(f"error: {path} not found — see SKILL.md first-run configuration")
-    return json.loads(path.read_text())
-
-
-def _require(cfg: dict, key: str) -> str:
-    val = (cfg.get(key) or "").strip()
-    if not val:
-        sys.exit(f"error: '{key}' is not set in scripts/config.json — "
-                 "run the skill's first-run setup (it prompts for this), or edit the file directly")
-    return val
+from config_util import (
+    load_config as _load_config,
+    require as _require,
+    resolve_reports_dir as _resolve_reports_dir,
+)
 
 ORG       = _require(_load_config(), "github_org")
 GH        = "gh"         # gh CLI binary; must be authenticated
