@@ -1,6 +1,6 @@
 # Agent Guardrails
 
-> Operational principles for agents working in this boilerplate. Three sections
+> Operational principles for agents working in Memnyx. Three sections
 > by scope: rules that apply to any agent (Universal), rules specific to the
 > user's main Claude session (Session-agent), and rules specific to sub-agents
 > spawned via the Agent tool (Autonomous-agent).

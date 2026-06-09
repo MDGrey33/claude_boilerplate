@@ -197,4 +197,4 @@ This skill **detects** (finds what needs to change). `skills-manager` **governs*
 
 ## Downstream skills — do not duplicate
 
-- **`contribute`** operates on captured lessons to prepare upstream boilerplate contributions. Downstream of this skill.
+- **`contribute`** operates on captured lessons to prepare upstream Memnyx contributions. Downstream of this skill.

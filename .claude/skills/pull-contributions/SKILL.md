@@ -1,6 +1,6 @@
 ---
 name: pull-contributions
-description: Pull generalized contributions from a project into the boilerplate. Runs `sanitizer --check` as a mandatory gate before integration.
+description: Pull generalized contributions from a project into Memnyx. Runs `sanitizer --check` as a mandatory gate before integration.
 user_invocable: true
 args: Path to a workspace's contributions/ folder (e.g., <workspace>/contributions/)
 ---
@@ -9,13 +9,13 @@ args: Path to a workspace's contributions/ folder (e.g., <workspace>/contributio
 
 See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full policy.
 
-- **Default model:** Haiku 4.5 — mechanical file copy + path rewrite from project to boilerplate
+- **Default model:** Haiku 4.5 — mechanical file copy + path rewrite from project to Memnyx
 - **Promote to Sonnet when:** a contribution needs de-identification or rewording before merging
 - **Promote to Opus when:** never
 
-# Pull Contributions — Integrate Project Learnings into Boilerplate
+# Pull Contributions — Integrate Project Learnings into Memnyx
 
-You are integrating generalized contributions from a project into this boilerplate repo. This skill is meant to be run **from the boilerplate repo**, not from a project.
+You are integrating generalized contributions from a project into Memnyx. This skill is meant to be run **from the Memnyx repo**, not from a project.
 
 ## Steps
 
@@ -73,7 +73,7 @@ You are integrating generalized contributions from a project into this boilerpla
    Skipped: [count] (with reasons)
    Files modified: [list]
 
-   Remember to commit the changes to the boilerplate repo.
+   Remember to commit the changes to the Memnyx repo.
    ```
 
 ## Important Rules

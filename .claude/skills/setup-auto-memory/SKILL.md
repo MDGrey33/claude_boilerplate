@@ -8,7 +8,7 @@ user_invocable: true
 
 ## What this does
 
-Wires the optional auto-memory system from `auto-memory/` (in this boilerplate) into the user's `~/.claude/`. After running this, the user has:
+Wires the optional auto-memory system from `auto-memory/` (in Memnyx) into the user's `~/.claude/`. After running this, the user has:
 
 - `~/.claude/projects/<active-slug>/memory/MEMORY.md` — header-only index
 - (optionally) four sanitized example memory files seeded into the same directory
@@ -119,7 +119,7 @@ Re-running this skill on an already-set-up directory must:
 
 - Don't run any of these steps without per-step confirmation.
 - Don't write to `~/CLAUDE.md` without showing the diff first.
-- Don't touch the boilerplate's project-scope memory at `repo/.claude/memory/` — this skill is exclusively about user-scope auto-memory.
+- Don't touch Memnyx's project-scope memory at `repo/.claude/memory/` — this skill is exclusively about user-scope auto-memory.
 - Don't enable any hook, scheduled task, or automation as part of setup. The user opts into those separately.
 
 ## Uninstall

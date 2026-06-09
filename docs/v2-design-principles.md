@@ -1,28 +1,28 @@
-# Boilerplate v2 — Design Principles
+# Memnyx v2 — Design Principles
 
 **Status:** Drafted 2026-05-05 from the v2 redesign discussion. Read this for the *what* and *why* of the v2 architecture.
 
 ## Setup
 
-- A user installs the boilerplate into a folder of their choice (their *workspace*): `~/`, `~/my-space`, `~/workspace`, etc.
+- A user installs Memnyx into a folder of their choice (their *workspace*): `~/`, `~/my-space`, `~/workspace`, etc.
 - The chosen folder hosts everything reusable: skills, agents, identity, brag log, MCP server configs, and the project registry.
 - `/setup-workspace` handles initialisation and syncs upstream updates. It creates the bare-minimum scaffolding only; other folders are created on first use by the skills that need them.
-- **Sibling layout:** the user clones the boilerplate source to a folder OUTSIDE the intended workspace (e.g., `~/src/claude_boilerplate/` as a sibling of `~/workspace/`). Source and workspace must never be nested. `/setup-workspace init` validates this and refuses if the layout is wrong. The sibling layout is what makes each setup self-contained against Claude Code's CLAUDE.md traversal-up behaviour.
+- **Sibling layout:** the user clones the boilerplate source to a folder OUTSIDE the intended workspace (e.g., `~/src/memnyx/` as a sibling of `~/workspace/`). Source and workspace must never be nested. `/setup-workspace init` validates this and refuses if the layout is wrong. The sibling layout is what makes each setup self-contained against Claude Code's CLAUDE.md traversal-up behaviour.
 - **Why sibling, not config-based isolation.** Claude Code traverses UP from cwd at session start, loading every `CLAUDE.md` it finds along the way (root-to-cwd order, no automatic stop). A `claudeMdExcludes` setting exists and can suppress specific parent files, but it requires each setup to enumerate the parent CLAUDE.mds it doesn't want — drift-prone, easy to forget, breaks when paths change. Sibling layout solves the same problem at the layout layer: if no parent path contains a CLAUDE.md, there's nothing to exclude. Decided 2026-05-09 after rejecting `claudeMdExcludes` as the primary mechanism. Reconsider only if multiple co-located setups become an unavoidable constraint.
 - The workspace coexists with Claude Code's harness state at `~/.claude/` (auto-memory dirs, base settings). It complements `~/.claude/`, not replaces it.
 
 ## Working from the workspace
 
 - The workspace is the canonical session root: identity, brag log, skills, agents, docs, the project registry, and workspace-level memory all live under it. The user runs Claude from any cwd under `<workspace>/` — most commonly the workspace root or a project subdirectory. Sessions started outside the workspace are out of scope; `/hello` refuses with a hint to cd into the workspace.
-- Claude Code's harness walks up the directory tree at session start, loading every CLAUDE.md it finds and resolving skills from the workspace's `.claude/skills/`. The workspace does not have to be the literal cwd; it must be an ancestor of the cwd for the boilerplate to be available.
+- Claude Code's harness walks up the directory tree at session start, loading every CLAUDE.md it finds and resolving skills from the workspace's `.claude/skills/`. The workspace does not have to be the literal cwd; it must be an ancestor of the cwd for Memnyx to be available.
 - **Active project context is logical state, not filesystem-driven.** `/hello` writes the active project (with workstream and open item) to the session marker; every other skill reads from the marker, not from cwd. `/hello` may use cwd at session start as a confirmation hint — e.g., suggesting a likely project when cwd is under `<workspace>/projects/<slug>/` — but the user always confirms; no skill, including /hello, derives the active project from cwd at any other moment.
 - The **project registry** (`<workspace>/.claude/projects-index.json`) is an index file mapping human-readable slugs (e.g., `my-work`, `ehr-backend-core`) to project paths and metadata. The `/project-registry` skill owns mutations; other skills read it directly.
 - `/hello` triggers inline registration of new projects via `/setup-workspace add-project` (full scaffold + registry write) — the user doesn't need to know either skill exists. `/project-registry add` alone only writes to the index; it doesn't scaffold the project's memory or session-marker dirs, so /hello can't use it directly.
 
 ## Projects
 
-- Projects live under `<workspace>/projects/<slug>/` — physical dirs or symlinks; the boilerplate doesn't care which.
-- The boilerplate treats every registered project **identically**. There's no `topic` vs `repo` switch in the runtime. "Topic" (personal cross-cutting work) and "repo" (team-shared codebase) are useful conceptual framings for users when deciding what to register, but the boilerplate doesn't model the distinction.
+- Projects live under `<workspace>/projects/<slug>/` — physical dirs or symlinks; Memnyx doesn't care which.
+- Memnyx treats every registered project **identically**. There's no `topic` vs `repo` switch in the runtime. "Topic" (personal cross-cutting work) and "repo" (team-shared codebase) are useful conceptual framings for users when deciding what to register, but Memnyx doesn't model the distinction.
 - Whether a project is committed to a git remote is a normal git workflow concern, separate from the registry. Per-engineer state (`workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/`) is gitignored regardless. Team-shared content (`CLAUDE.md`, `MEMORY.md`, `lessons-learned.md`, `docs/`, `settings.json`) is committed when the user wants it shared.
 - All projects use the same layout. **Memory** lives under `.claude/memory/`: `MEMORY.md` (curated process knowledge, lessons promoted across sessions), `lessons-learned.md` (raw lessons, append-only), and `project-context.md` (domain knowledge — business problem, users, constraints, what "done" looks like). All three are scaffolded at registration. Process knowledge (MEMORY.md / lessons-learned.md) and domain knowledge (project-context.md) are deliberately separate: process knowledge accumulates from doing the work; domain knowledge is the briefing about *why* the work exists. **Working state and skill outputs** sit at the project root: `workstreams/`, `sessions/active/`, and `artifacts/` are scaffolded at registration; `collected/` and `contributions/` are created by their owning skills on first use.
 
@@ -40,17 +40,17 @@ Three memory layers coexist; each follows the same pattern (index loaded at sess
 | Layer | Owner | Location | Load mechanism |
 |---|---|---|---|
 | Harness auto-memory | Claude Code (Anthropic) | `~/.claude/projects/<harness-slug>/memory/MEMORY.md` | Auto-loaded by the harness at session start (first 200 lines / 25 KB). Topic files read on demand when relevant. |
-| Workspace memory | Boilerplate | `<workspace>/.claude/memory/MEMORY.md` | Loaded via `@.claude/memory/MEMORY.md` import in `<workspace>/CLAUDE.md`, picked up by Claude Code's ancestor walk on every workspace-rooted session. Topic files referenced inside MEMORY.md as markdown links — read on demand. |
-| Project memory | Boilerplate | `<workspace>/projects/<slug>/.claude/memory/MEMORY.md` | Same shape: `@.claude/memory/MEMORY.md` in the project's `CLAUDE.md`. For cd-in engineers (entering the project repo without `/hello`), the project CLAUDE.md auto-loads via ancestor walk; the `@`-include then loads the index. For workspace-rooted users, `/hello` step 9 reads project memory directly. |
+| Workspace memory | Memnyx | `<workspace>/.claude/memory/MEMORY.md` | Loaded via `@.claude/memory/MEMORY.md` import in `<workspace>/CLAUDE.md`, picked up by Claude Code's ancestor walk on every workspace-rooted session. Topic files referenced inside MEMORY.md as markdown links — read on demand. |
+| Project memory | Memnyx | `<workspace>/projects/<slug>/.claude/memory/MEMORY.md` | Same shape: `@.claude/memory/MEMORY.md` in the project's `CLAUDE.md`. For cd-in engineers (entering the project repo without `/hello`), the project CLAUDE.md auto-loads via ancestor walk; the `@`-include then loads the index. For workspace-rooted users, `/hello` step 9 reads project memory directly. |
 
 ### Parallel-systems contract
 
-The boilerplate is a **parallel system** to the harness, not a replacement. Anthropic owns the harness mechanism (`autoMemoryEnabled`, `autoMemoryDirectory`, the 200-line cap, realpath project keying); the boilerplate adds workspace- and project-scope memory layers via committed files and `@`-includes in CLAUDE.md. Both layers follow the harness's documented design: **the index loads at session start; topic files load on demand when Claude judges them relevant.**
+Memnyx is a **parallel system** to the harness, not a replacement. Anthropic owns the harness mechanism (`autoMemoryEnabled`, `autoMemoryDirectory`, the 200-line cap, realpath project keying); Memnyx adds workspace- and project-scope memory layers via committed files and `@`-includes in CLAUDE.md. Both layers follow the harness's documented design: **the index loads at session start; topic files load on demand when Claude judges them relevant.**
 
 Consequences:
 
 - **No `@`-lines for topic files inside MEMORY.md.** The index references topic files via markdown links (e.g., `- [Title](feedback_X.md) — hook`). Adding `@`-lines for each would force always-load, deviating from the documented pattern, costing context for content that may never be relevant this session, and creating an asymmetry with the harness layer.
-- **The boilerplate never redirects, disables, or wraps the harness auto-memory.** They coexist.
+- **Memnyx never redirects, disables, or wraps the harness auto-memory.** They coexist.
 - **Workspace MEMORY.md and harness MEMORY.md may carry related content** (cross-cutting personal feedback can graduate from the harness layer to the workspace layer via `/bye` curation), but there is no mechanism-level overlap.
 
 ### What does NOT auto-load
@@ -97,14 +97,14 @@ The inclusion list is deliberately narrow. Memory entries are short and high-sig
 
 ## Update and contribution flow
 
-- `/setup-workspace sync` pulls upstream changes for content the boilerplate genuinely owns: skills, agents, and `agent-guardrails.md`. Local edits to these are flagged at sync time; the user consents before overwrite.
+- `/setup-workspace sync` pulls upstream changes for content Memnyx genuinely owns: skills, agents, and `agent-guardrails.md`. Local edits to these are flagged at sync time; the user consents before overwrite.
 - Other docs in `.claude/docs/` (`architecture.md`, `conventions.md`, `cognee-usage.md`, etc.) are **templates** copied at init. The team or user evolves them over time; sync does NOT overwrite them.
 - The user's own `CLAUDE.md`, workstreams, sessions, and any user-authored content are not touched by sync.
 - Edits intended for upstream go through `/contribute`, which stages changes in the source repo for a PR.
 
 ## First-time experience without setup
 
-- An engineer who clones a repo without the boilerplate sees a setup tip in the repo's `CLAUDE.md` prose, auto-loaded by Claude Code at session start. The tip recommends installation but doesn't block work.
+- An engineer who clones a repo without Memnyx sees a setup tip in the repo's `CLAUDE.md` prose, auto-loaded by Claude Code at session start. The tip recommends installation but doesn't block work.
 - Repos that ship with `.claude/skills/` committed remain functional standalone.
 
 ## What's committed where
@@ -112,9 +112,9 @@ The inclusion list is deliberately narrow. Memory entries are short and high-sig
 | Surface | Committed | Gitignored |
 |---------|-----------|------------|
 | Repo | `CLAUDE.md`, `.claude/memory/MEMORY.md`, `.claude/memory/lessons-learned.md`, `.claude/docs/`, `.claude/settings.json` (optionally `.claude/skills/`) | `workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/` (all at repo root) |
-| Workspace | boilerplate scaffolding, identity, brag log, skills, agents, docs, `.claude/memory/MEMORY.md`, `.claude/memory/lessons-learned.md` | `projects/`, `workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/` (all at workspace root) |
+| Workspace | Memnyx scaffolding, identity, brag log, skills, agents, docs, `.claude/memory/MEMORY.md`, `.claude/memory/lessons-learned.md` | `projects/`, `workstreams/`, `sessions/`, `collected/`, `artifacts/`, `contributions/` (all at workspace root) |
 
-The user decides their own workspace backup strategy — git remote, dotfiles tool, or none at all. The boilerplate doesn't dictate.
+The user decides their own workspace backup strategy — git remote, dotfiles tool, or none at all. Memnyx doesn't dictate.
 
 ## Naming
 

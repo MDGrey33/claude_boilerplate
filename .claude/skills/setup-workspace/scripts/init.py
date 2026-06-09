@@ -5,7 +5,7 @@ Usage:
     init.py --workspace <path> [--source <path>] [--dry-run]
 
 Sibling-layout convention: the source clone and the target workspace live at
-sibling paths (e.g., ~/src/claude_boilerplate/ and ~/workspace/). Run init
+sibling paths (e.g., ~/src/memnyx/ and ~/workspace/). Run init
 from inside the source clone; pass the target workspace via --workspace.
 
 Source path defaults to cwd when cwd is itself a v2 boilerplate (identified
@@ -102,7 +102,7 @@ def resolve_source(source_arg: str | None) -> Path:
 
     die(
         f"cwd ({cwd}) is not a v2 boilerplate, and --source was not provided.\n"
-        f"hint: run init from inside the cloned claude_boilerplate folder, "
+        f"hint: run init from inside the cloned memnyx folder, "
         f"or pass --source <path> explicitly."
     )
 

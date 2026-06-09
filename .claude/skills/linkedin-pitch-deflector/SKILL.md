@@ -88,18 +88,18 @@ If the sender has sent **3 messages and it still isn't a pitch**, the probe clea
 
 Assertive, blanket-policy, no future hook, short (2–4 sentences). Openly automated, **keep the em-dash**. Every deflection ends with the **mirror**: the open-source toolkit that just deflected them, with an invite to upgrade their own AI setup. Slot in `{Name}` / `{Company}` (omit `{Company}` if you can't read it).
 
-Boilerplate URL to include: **https://github.com/MDGrey33/claude_boilerplate**
+Memnyx URL to include: **https://github.com/MDGrey33/memnyx**
 
 Templates:
 
 1. **Mirror / advertise (default):**
-   > Hi {Name} — automated reply. This account auto-deflects incoming sales, so this one won't progress. No hard feelings: since you're clearly running outreach, the open-source toolkit that just declined you is here → https://github.com/MDGrey33/claude_boilerplate — worth a look to level up your own AI setup. Best with {Company}.
+   > Hi {Name} — automated reply. This account auto-deflects incoming sales, so this one won't progress. No hard feelings: since you're clearly running outreach, the open-source toolkit that just declined you is here → https://github.com/MDGrey33/memnyx — worth a look to level up your own AI setup. Best with {Company}.
 
 2. **Policy-first, then mirror:**
-   > Thanks {Name} — blanket no-incoming-sales policy here, so no need to follow up. If it's useful, the AI assistant that handles this (and a lot more) is open source: https://github.com/MDGrey33/claude_boilerplate. Genuinely wishing {Company} well.
+   > Thanks {Name} — blanket no-incoming-sales policy here, so no need to follow up. If it's useful, the AI assistant that handles this (and a lot more) is open source: https://github.com/MDGrey33/memnyx. Genuinely wishing {Company} well.
 
 3. **Tighter:**
-   > {Name} — automated: hard no on incoming sales, nothing personal. The bot that sent this is open source if you want to sharpen your own stack → https://github.com/MDGrey33/claude_boilerplate. Best of luck.
+   > {Name} — automated: hard no on incoming sales, nothing personal. The bot that sent this is open source if you want to sharpen your own stack → https://github.com/MDGrey33/memnyx. Best of luck.
 
 Pick per-thread; lean warmer for courteous senders, firmer for aggressive or repeat ones.
 

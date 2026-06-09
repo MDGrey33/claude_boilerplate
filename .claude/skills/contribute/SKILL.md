@@ -1,6 +1,6 @@
 ---
 name: contribute
-description: Generalize a lesson and stage it for boilerplate contribution. Delegates sanitization to `sanitizer` before staging.
+description: Generalize a lesson and stage it for Memnyx contribution. Delegates sanitization to `sanitizer` before staging.
 user_invocable: true
 args: Optional description of the lesson or improvement to generalize
 ---
@@ -13,9 +13,9 @@ See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full pol
 - **Promote to Sonnet when:** never — generalization is the core task
 - **Promote to Opus when:** never
 
-# Contribute — Generalize Lessons for Boilerplate
+# Contribute — Generalize Lessons for Memnyx
 
-You are preparing a generalized contribution that can be pulled into the shared boilerplate repo. The contribution must be **project-agnostic** — no project names, file paths, domain terms, API keys, or internal details.
+You are preparing a generalized contribution that can be pulled into Memnyx. The contribution must be **project-agnostic** — no project names, file paths, domain terms, API keys, or internal details.
 
 **Setup — Resolve `<workspace>` and scope**: The skill's base directory is `<workspace>/.claude/skills/contribute/`; walk up three directory levels and validate that `<workspace>/.claude/.workspace` exists. Abort with a setup-broken error if validation fails. Then read the active session marker from `<workspace>/sessions/active/*.md` and `<workspace>/projects/*/sessions/active/*.md` to determine scope: if `project_slug` is `workspace`, scope is `<workspace>`; otherwise scope is `<workspace>/projects/<project_slug>`. If no marker exists, ask the user whether to read from workspace or a specific project before proceeding.
 
@@ -53,7 +53,7 @@ You are preparing a generalized contribution that can be pulled into the shared 
    # Contribution: <title>
 
    **Type**: skill-update | new-skill | convention | memory-template | docs | config
-   **Target**: <which file(s) in the boilerplate this would affect>
+   **Target**: <which file(s) in Memnyx this would affect>
    **Date**: YYYY-MM-DD
 
    ## Problem
@@ -66,7 +66,7 @@ You are preparing a generalized contribution that can be pulled into the shared 
 
    ## Rationale
 
-   <Why this improves the boilerplate, based on real project experience>
+   <Why this improves Memnyx, based on real project experience>
    ```
 
 6. **Review with user**: Show the contribution along with the sanitizer report and ask:
@@ -83,12 +83,12 @@ You are preparing a generalized contribution that can be pulled into the shared 
    Type: <type>
    Target: <target files>
 
-   To integrate into boilerplate, run /pull-contributions from the boilerplate repo
+   To integrate into Memnyx, run /pull-contributions from the Memnyx repo
    and point it at <workspace>/contributions/.
    ```
 
 ## Important Rules
 
 - **Never include**: project names, internal URLs, API endpoints, team names, proprietary domain terms, specific file paths from the project
-- **Always include**: the actionable recommendation, the category, which boilerplate files would change
+- **Always include**: the actionable recommendation, the category, which Memnyx files would change
 - **Ask before saving**: Always show the user the generalized version before writing it

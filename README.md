@@ -1,4 +1,6 @@
-# Claude Code Boilerplate
+# Memnyx
+
+*Persistent memory and a spine for Claude Code — formerly Claude Code Boilerplate.*
 
 Persistent memory and session management for Claude Code, with a pluggable semantic-memory backend.
 
@@ -9,13 +11,13 @@ Persistent memory and session management for Claude Code, with a pluggable seman
 - **Lessons learned**: Captures mistakes, conventions, and patterns during session wrap-up
 - **Skills lifecycle**: `/skills-manager` adds, updates, removes, and reviews skills based on lessons or requests
 - **MCP health monitoring**: `/mcp-doctor` checks connectivity
-- **Boilerplate contributions**: `/contribute` generalizes project lessons; `/pull-contributions` integrates them back into the boilerplate
+- **Memnyx contributions**: `/contribute` generalizes project lessons; `/pull-contributions` integrates them back into Memnyx
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/MDGrey33/claude_boilerplate.git ~/src/claude_boilerplate
-cd ~/src/claude_boilerplate
+git clone https://github.com/MDGrey33/memnyx.git ~/src/memnyx
+cd ~/src/memnyx
 claude
 # in the session: /setup-workspace init --workspace ~/workspace
 # exit, then start all future sessions from ~/workspace
@@ -50,7 +52,7 @@ Semantic memory (optional): markdown memory works with no extra setup. For seman
 | `/one-on-one-prep` | Manual | Synthesize a member's activity into 1:1 meeting prep |
 | `/log` | Auto (via skills) | Append structured entry to agent log |
 | `/contribute` | Manual | Generalize a lesson and stage it in `<workspace>/contributions/` |
-| `/pull-contributions` | Manual (from boilerplate repo) | Pull staged contributions from a project into the boilerplate |
+| `/pull-contributions` | Manual (from Memnyx repo) | Pull staged contributions from a project into Memnyx |
 | `/setup-cognee` | Manual | Install and configure cognee-mcp on this machine (semantic-memory backend option) |
 | `/setup-wikibase` | Manual | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/sanitizer` | Auto (via `/contribute`, `/pull-contributions`) or manual | Scrub files for secrets, PII, private context, tone risks before publish. `--check` mode for CI gates. |
@@ -86,17 +88,17 @@ Specialist subagents in `.claude/agents/` (deployed + synced like skills):
 | Agent | Purpose |
 |-------|---------|
 | `research-expert` | Parallel web-research specialist behind `/research` — gathers corroborated evidence from multiple independent sources and writes a self-contained report to keep the caller's context window small. |
-| `boilerplate-guardian` | Read-only guardian of the boilerplate's spirit. Reviews open PRs (full code review + philosophy alignment + skill-table parity) and returns a clear, reasoned merge recommendation with staged review comments — it never posts or merges; a human approves. Run on request or on a recurring schedule. |
+| `memnyx-guardian` | Read-only guardian of Memnyx's spirit. Reviews open PRs (full code review + philosophy alignment + skill-table parity) and returns a clear, reasoned merge recommendation with staged review comments — it never posts or merges; a human approves. Run on request or on a recurring schedule. |
 
-## Contributing Back to the Boilerplate
+## Contributing Back to Memnyx
 
-Lessons learned in individual projects can flow back to improve the shared boilerplate — without leaking project-specific details.
+Lessons learned in individual projects can flow back to improve the shared Memnyx framework — without leaking project-specific details.
 
 ### Flow
 
 ```text
-Project A                          Boilerplate Repo
-─────────                          ────────────────
+Project A                          Memnyx repo
+─────────                          ───────────
 /lessons "discovery"
   → .claude/memory/lessons-learned.md
 /contribute
@@ -114,7 +116,7 @@ Project A                          Boilerplate Repo
 
 1. **In your project**: Run `/contribute` (or `/contribute "the lesson"`) to generalize a lesson. Claude strips project names, paths, and domain terms, then writes a contribution file to `<workspace>/contributions/`.
 
-2. **In the boilerplate repo**: Run `/pull-contributions /path/to/your/project` to review and integrate. Each contribution is shown individually for approval. No changes are made without explicit confirmation.
+2. **In the Memnyx repo**: Run `/pull-contributions /path/to/your/project` to review and integrate. Each contribution is shown individually for approval. No changes are made without explicit confirmation.
 
 3. **Privacy by design**: The `/contribute` skill rewrites lessons to be project-agnostic before saving. The `/pull-contributions` skill flags any remaining project-specific details. Project-specific knowledge never leaves the project automatically.
 
@@ -126,11 +128,11 @@ Three scopes keep knowledge organised by ownership:
 |-------|----------|---------|
 | Personal | `<workspace>/me/` | Identity, team roster, brag log, growth notes |
 | Project | `<project>/.claude/memory/` + project root | Process knowledge, domain context, working state |
-| Contributions | `<workspace>/contributions/` | Generalised lessons staged for boilerplate |
+| Contributions | `<workspace>/contributions/` | Generalised lessons staged for Memnyx |
 
 ### Personal workspace (`<workspace>/me/`)
 
-Bootstrapped by `/setup-workspace init`, built up organically by `/bye`. Not in any git repo — personal to the engineer. `<workspace>` is wherever the user installed the boilerplate (e.g., `~/workspace/`).
+Bootstrapped by `/setup-workspace init`, built up organically by `/bye`. Not in any git repo — personal to the engineer. `<workspace>` is wherever the user installed Memnyx (e.g., `~/workspace/`).
 
 ```text
 <workspace>/me/
@@ -151,7 +153,7 @@ Working state and skill outputs sit at the **project root** (gitignored). Commit
 ├── sessions/              # Closed session narratives (gitignored)
 ├── collected/             # Raw collection outputs from skills (gitignored)
 ├── artifacts/             # Synthesised skill outputs (gitignored)
-└── contributions/         # Staged boilerplate contributions (gitignored)
+└── contributions/         # Staged Memnyx contributions (gitignored)
 
 .claude/
 ├── memory/
@@ -177,7 +179,7 @@ Claude Code reads memory in two passes at session start:
 
 Workspace and project memory follow the same pattern as the harness: the workspace `CLAUDE.md` `@`-includes `<workspace>/.claude/memory/MEMORY.md`; each project's `CLAUDE.md` does the same at project scope. The index loads at session start; topic files referenced inside (`feedback_*.md`, `convention_*.md`, etc.) are read on demand. Engineers entering a project repo directly — without setting up the workspace — still get the project's curated memory index loaded automatically via the project's `CLAUDE.md` `@`-include.
 
-The boilerplate never redirects, wraps, or overrides the harness auto-memory. Two parallel layers: the harness carries per-user notes the harness writes; workspace and project memory carry curated patterns written by `/bye`. See [Optional: Auto-Memory System](#optional-auto-memory-system) below for the auto-memory layer's curation discipline and the `setup-auto-memory` skill that wires it in.
+Memnyx never redirects, wraps, or overrides the harness auto-memory. Two parallel layers: the harness carries per-user notes the harness writes; workspace and project memory carry curated patterns written by `/bye`. See [Optional: Auto-Memory System](#optional-auto-memory-system) below for the auto-memory layer's curation discipline and the `setup-auto-memory` skill that wires it in.
 
 ### Team & leadership features
 
@@ -191,7 +193,7 @@ For engineering managers, directors, and VPs — driven by `<workspace>/me/ident
 
 For how the auto-memory layer loads alongside workspace and project memory, see [How memory loads](#how-memory-loads) above. This section covers the curation discipline and the `setup-auto-memory` skill that wires the opt-in package in.
 
-This boilerplate also ships an opt-in **auto-memory** package at `auto-memory/`. It complements the project-scope memory above with a user-scope, typed-atomic-file system that lives under `~/.claude/projects/<slug>/memory/` — the directory Claude Code's harness already manages per project.
+Memnyx also ships an opt-in **auto-memory** package at `auto-memory/`. It complements the project-scope memory above with a user-scope, typed-atomic-file system that lives under `~/.claude/projects/<slug>/memory/` — the directory Claude Code's harness already manages per project.
 
 The two layers serve different purposes: project memory holds curated repo knowledge shared with collaborators; auto-memory holds personal preferences and behavioral feedback that follow the user across projects.
 
@@ -225,4 +227,4 @@ The memory files are plain markdown. Add new files or sections as needed. Update
 
 Licensed under the [Apache License, Version 2.0](LICENSE). Redistributions must retain the [NOTICE](NOTICE) file.
 
-A practical note for anyone running this boilerplate inside an organization: the `/sanitizer` gate on upstream contributions is not just a privacy control — anything merged into this repo is licensed to all downstream users irrevocably. Scrub org-specific content before it crosses that boundary; removal after the fact deletes the file, not the grant.
+A practical note for anyone running Memnyx inside an organization: the `/sanitizer` gate on upstream contributions is not just a privacy control — anything merged into this repo is licensed to all downstream users irrevocably. Scrub org-specific content before it crosses that boundary; removal after the fact deletes the file, not the grant.

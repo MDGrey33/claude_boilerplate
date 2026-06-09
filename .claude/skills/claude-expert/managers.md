@@ -13,7 +13,7 @@ artifact **type** has a dedicated **manager** skill owning its full lifecycle
 claude-expert itself never edits — it picks the surface and hands off to whatever
 manager owns that type.
 
-**This registry is a taxonomy, not a shipped roster.** The boilerplate does not
+**This registry is a taxonomy, not a shipped roster.** Memnyx does not
 install fourteen named manager skills for you. What it ships is (1) the artifact-type
 taxonomy below, with a *conventional* manager name per type as an **example** of what
 such a manager would be called and own, and (2) a discovery step

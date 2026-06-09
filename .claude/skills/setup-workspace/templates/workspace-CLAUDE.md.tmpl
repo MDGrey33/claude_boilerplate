@@ -75,8 +75,8 @@ Run `/setup-cognee` or `/setup-wikibase` to install a semantic-memory backend (o
 | `/collect-team-activity` | Collect a team member's daily activity (leadership roles) |
 | `/one-on-one-prep` | Synthesize a member's activity into 1:1 meeting prep |
 | `/log` | Append structured entry to agent log (internal/auto-only, not user-invocable) |
-| `/contribute` | Generalize a lesson and stage it for boilerplate contribution |
-| `/pull-contributions` | Pull generalized contributions from a project into the boilerplate |
+| `/contribute` | Generalize a lesson and stage it for Memnyx contribution |
+| `/pull-contributions` | Pull generalized contributions from a project into Memnyx |
 | `/setup-cognee` | Install and configure cognee-mcp on this machine (semantic-memory backend option) |
 | `/setup-wikibase` | Install and configure a local Wikibase Suite — a Wikidata-style knowledge graph with claim-level provenance (alternative semantic-memory backend to cognee). See `.claude/docs/memory-systems.md`. |
 | `/setup-auto-memory` | Wire in the optional auto-memory system. See `auto-memory/README.md`. |
@@ -105,7 +105,7 @@ Skills in `.claude/skills/` are **deployed copies** — maintained in the boiler
 
 To propose a skill improvement:
 1. Use `/contribute` to generalise the lesson and stage it in `contributions/`
-2. The boilerplate maintainer runs `/pull-contributions` to apply it
+2. The Memnyx maintainer runs `/pull-contributions` to apply it
 3. Changes land via GitHub PR and maintainer review
 
 `/skills-manager` identifies improvement opportunities during sessions and guides you through step 1.
@@ -129,7 +129,7 @@ To propose a skill improvement:
 ## Detailed Docs
 
 Refer to these files for more detail (use `@` to include them in context):
-- `.claude/docs/architecture.md` — boilerplate architecture
+- `.claude/docs/architecture.md` — Memnyx architecture
 - `.claude/docs/conventions.md` — code style and patterns
 - `.claude/docs/memory-systems.md` — how to choose a semantic-memory backend (markdown / cognee / Wikibase)
 - `.claude/docs/cognee-usage.md` — how to use cognee MCP tools
