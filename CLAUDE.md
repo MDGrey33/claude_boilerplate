@@ -77,7 +77,7 @@ Run `/setup-workspace init --workspace <path>` to initialise a workspace (see RE
 | `/finance-controller` | Audit CLAUDE.md, skills, MCPs for cost and context efficiency. Produces a prioritized report; delegates execution to `skills-manager` or asks for approval. Use weekly or when sessions feel slow. |
 | `/claude-expert` | Reference for Claude Code surfaces — skills vs hooks vs subagents vs MCPs vs memory vs settings. Use when asked "where should this live" or "how does Claude Code X work". Routes to the doer skill; never edits itself. |
 | `/google-script-deploy` | Deploy an HTML file as a Google Apps Script web app with a stable URL. Called by other skills (e.g. a dashboard-generating skill) with a `sourceDir` argument; handles clasp setup, auth, project creation, and in-place redeploys. |
-| `/security-snapshot` | Full security pipeline — AWS Inspector V2 + GitHub security alerts → correlation → self-contained HTML dashboard with trend history. Org config in `scripts/config.json`; first run prompts for it. Run monthly or on demand. |
+| `/security-snapshot` | Full security pipeline — AWS Inspector V2 + GitHub security alerts → correlation → self-contained HTML dashboard with trend history. Org config in `scripts/config.local.json` (gitignored; overlays the committed template); first run prompts for it. Run monthly or on demand. |
 
 ### Skill chains (automatic)
 - `/hello` → `/mcp-doctor` (session mode: enumerates loaded tools, no process spawning)

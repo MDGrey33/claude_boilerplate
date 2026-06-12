@@ -45,7 +45,7 @@ Do NOT run `build_dashboard.py` before the other three scripts complete — it d
 
 ## Adapting this skill to a different workspace
 
-All org-specific values live in `scripts/config.json`: `github_org`, `aws_profile`, `aws_region` (required — Step 0 prompts for them when missing), plus `owner_project` / `default_scope` (where snapshots and the dashboard land — point both at a project slug that exists in your workspace, check `ls projects/`; both normally hold the same value).
+All org-specific values live in `scripts/config.local.json` (gitignored; it overlays the committed `scripts/config.json` template, local keys winning): `github_org`, `aws_profile`, `aws_region` (required — Step 0 prompts for them when missing), plus `owner_project` / `default_scope` (where snapshots and the dashboard land — point both at a project slug that exists in your workspace, check `ls projects/`; both normally hold the same value). `config.json` itself stays a value-free template so `/setup-workspace sync` can refresh it without touching your settings.
 
 You'll know if a value is wrong on first run: every script errors with a clear message naming the missing or invalid setting. There is no silent misrouting — wrong values fail fast.
 
@@ -66,8 +66,8 @@ WS="$(cd "<skill-base-dir>/../../.." && pwd)"
 
 SCRIPT_DIR="$WS/.claude/skills/security-snapshot/scripts"
 
-# Resolve scope from config.json unless --scope was passed
-SCOPE="$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/config.json'))['default_scope'])")"
+# Resolve scope via the shared loader (config.json overlaid by config.local.json) unless --scope was passed
+SCOPE="$(python3 -c "import sys; sys.path.insert(0,'$SCRIPT_DIR'); from config_util import load_config; print(load_config()['default_scope'])")"
 # (apply user's --scope override here if invoked with one)
 
 if [ "$SCOPE" = "workspace" ]; then
@@ -89,22 +89,32 @@ all of the above plus runs the pipeline end-to-end.
 
 ## Step 0 — First-run configuration
 
-Read `$SCRIPT_DIR/config.json`. Three values are required: `github_org`, `aws_profile`,
-`aws_region`. If any is empty or missing, this is a first run — prompt the user for them:
+Config loads in two layers: `config.json` is the committed template (defaults + docs,
+no real values); `config.local.json` is gitignored and overlays it with this deployment's
+real values (local keys win). This split is what lets `/setup-workspace sync` refresh
+`config.json` without ever clobbering your settings — so **always write real values to
+`config.local.json`, never to `config.json`.**
+
+Read the effective config (the scripts merge both layers). Three values are required:
+`github_org`, `aws_profile`, `aws_region`. If any is empty or missing, this is a first run —
+prompt the user for them:
 
 - **github_org** — the GitHub organization to scan (all repos are enumerated)
 - **aws_profile** — an AWS profile with Inspector2 + STS read access (read-only recommended)
 - **aws_region** — the region where Inspector V2 runs
 
-Also offer the optional values while you're there: `dashboard_title` (defaults to
-"Security Dashboard") and `annotations` (event markers on the Trend tab — fine to leave empty).
+Also offer the optional values while you're there: `owner_project` / `default_scope` (where
+outputs land — a project slug or `workspace`), `dashboard_title` (defaults to
+"Security Dashboard"), and `annotations` (event markers on the Trend tab — fine to leave empty).
 
 Validate before saving: `gh api orgs/<org> --jq .login` resolves, and
-`aws sts get-caller-identity --profile <profile>` succeeds. Write the confirmed values back
-to `config.json`. The Python scripts fail fast with a clear message if a required value is
-missing, so a skipped Step 0 cannot silently misroute — but prompting here beats a mid-pipeline error.
+`aws sts get-caller-identity --profile <profile>` succeeds. Write the confirmed values to
+`$SCRIPT_DIR/config.local.json` (create it if absent — a flat JSON object of just the keys
+you're setting; the rest fall through to the template). The Python scripts and
+`run_analysis.sh` both fail fast with a clear message if a required value is missing, so a
+skipped Step 0 cannot silently misroute — but prompting here beats a mid-pipeline error.
 
-If all three values are already set, skip silently.
+If all three values already resolve, skip silently.
 
 ---
 
@@ -112,10 +122,10 @@ If all three values are already set, skip silently.
 
 The skill installs what it can; only authentication is delegated to the user.
 
-Read `aws_profile` from `$SCRIPT_DIR/config.json`, then run in parallel:
+Read `aws_profile` via the shared loader (config.json overlaid by config.local.json), then run in parallel:
 
 ```bash
-AWS_PROFILE="$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/config.json'))['aws_profile'])")"
+AWS_PROFILE="$(python3 -c "import sys; sys.path.insert(0,'$SCRIPT_DIR'); from config_util import load_config; print(load_config()['aws_profile'])")"
 python3 -c "import boto3; print('boto3 ok')"
 gh auth status
 aws sts get-caller-identity --profile "$AWS_PROFILE"

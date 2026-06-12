@@ -65,7 +65,7 @@ Semantic memory (optional): markdown memory works with no extra setup. For seman
 | `/say-it` | Manual | Speak content aloud via Kokoro neural TTS (local, offline) |
 | `/linkedin-pitch-deflector` | Manual | Sweep unread LinkedIn DMs — deflect cold sales pitches, socially probe ambiguous openers, hand genuine threads back to you. Drives logged-in Chrome via the chrome-control MCP. |
 | `/google-script-deploy` | Called by other skills, or manual | Deploy an HTML file as a Google Apps Script web app with a stable URL — handles clasp install, auth, project creation, and in-place redeploys. Per-directory config in `clasp-projects.json`; no global state. |
-| `/security-snapshot` | Manual (monthly or on demand) | Full security pipeline — AWS Inspector V2 + GitHub security alerts → cross-source correlation → self-contained HTML dashboard with trend history. Org/profile/region configured per-workspace in `scripts/config.json` (first run prompts). Dated snapshots for delta tracking. |
+| `/security-snapshot` | Manual (monthly or on demand) | Full security pipeline — AWS Inspector V2 + GitHub security alerts → cross-source correlation → self-contained HTML dashboard with trend history. Org/profile/region configured per-workspace in `scripts/config.local.json` (gitignored; overlays the committed template; first run prompts). Dated snapshots for delta tracking. |
 
 ### Skill Chains
 

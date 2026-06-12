@@ -24,9 +24,19 @@ fail() { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 WS="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 [ -f "$WS/.claude/.workspace" ] || fail "Workspace marker not found at $WS/.claude/.workspace — is this skill deployed inside a v2 workspace?"
 
-# ── Resolve scope from config.json + optional --scope flag ─────────────────────
-SCOPE="$(python3 -c "import json,sys; print(json.load(open('$SCRIPT_DIR/config.json'))['default_scope'])" 2>/dev/null)" \
-  || fail "Cannot read default_scope from $SCRIPT_DIR/config.json — file missing, malformed JSON, or key absent. Run /security-snapshot first-run setup."
+# ── Config read: delegate to the SAME loader the Python scripts use
+#    (config_util.load_config — config.json template overlaid by config.local.json).
+#    Reusing it means the shell orchestrator and the scripts resolve identical
+#    values with identical overlay/empty/malformed/strip handling — no divergence,
+#    and a clear error (naming the offending file) on bad JSON.
+cfg_get() {
+  python3 -c "import sys; sys.path.insert(0, sys.argv[1]); from config_util import load_config; v = load_config().get(sys.argv[2], ''); print(v.strip() if isinstance(v, str) else ('' if v is None else v))" "$SCRIPT_DIR" "$1"
+}
+
+# ── Resolve scope from config + optional --scope flag ──────────────────────────
+SCOPE="$(cfg_get default_scope)" \
+  || fail "Could not resolve default_scope from config (see the error above). Run /security-snapshot first-run setup."
+[ -n "$SCOPE" ] || fail "default_scope is empty — run /security-snapshot first-run setup (writes config.local.json)."
 while [ $# -gt 0 ]; do
   case "$1" in
     --scope)    SCOPE="$2"; shift 2 ;;
@@ -43,11 +53,11 @@ else
     cat >&2 <<EOF
 ✗ Project '$SCOPE' not found at $WS/projects/$SCOPE.
 
-This usually means the skill's default_scope in scripts/config.json points at a
-project that doesn't exist in this workspace. Two fixes, pick one:
+This usually means the skill's default_scope points at a project that doesn't
+exist in this workspace. Two fixes, pick one:
 
-  1. Edit $SCRIPT_DIR/config.json — set owner_project and default_scope to a
-     project slug that exists in this workspace (see ls $WS/projects/).
+  1. Edit $SCRIPT_DIR/config.local.json — set owner_project and default_scope to
+     a project slug that exists in this workspace (see ls $WS/projects/).
   2. Pass --scope <name> at the CLI to override for a single run, or
      --scope workspace to write outputs at workspace level instead.
 EOF
@@ -76,10 +86,10 @@ gh auth status --hostname github.com &>/dev/null \
   || fail "gh not authenticated. Run: gh auth login"
 ok "gh CLI authenticated"
 
-AWS_PROFILE_CFG="$(python3 -c "import json; print(json.load(open('$SCRIPT_DIR/config.json')).get('aws_profile',''))" 2>/dev/null)" \
-  || fail "Cannot read aws_profile from $SCRIPT_DIR/config.json — file missing or malformed JSON."
+AWS_PROFILE_CFG="$(cfg_get aws_profile)" \
+  || fail "Could not resolve aws_profile from config (see the error above)."
 [ -n "$AWS_PROFILE_CFG" ] \
-  || fail "aws_profile not set in $SCRIPT_DIR/config.json — run /security-snapshot once for first-run setup, or edit the file."
+  || fail "aws_profile not set — run /security-snapshot once for first-run setup (writes config.local.json), or edit $SCRIPT_DIR/config.local.json."
 aws sts get-caller-identity --profile "$AWS_PROFILE_CFG" &>/dev/null \
   || fail "AWS profile $AWS_PROFILE_CFG failed. Check credentials."
 ok "AWS profile $AWS_PROFILE_CFG"
