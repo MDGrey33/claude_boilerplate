@@ -32,6 +32,10 @@ Files that CLAUDE.md `@`-imports (the workspace memory index, `agent-guardrails.
 
 **Zero-sum rule:** at Yellow or above, a new rule lands only if an existing rule is removed or the file is condensed by at least the addition's size. This changes the question from "is this rule good?" (almost always yes) to "is it better than the weakest rule already in the file?" — the correct economics for always-loaded context. The cap also forces compression, and compressed rules are usually better rules.
 
+**Safety exemption:** rules that prevent irreversible harm (production read-only, secrets-to-keystore, and similar) are never displacement candidates, and a new safety rule may land at Yellow without displacing anything. The overage still gets flagged — compression then rebalances among style and process rules only. Budget pressure should never be the reason a safety rule is absent.
+
+**Who does what:** `finance-controller` detects (this audit); `pull-contributions` enforces at the entry point (its budget gate fires before a convention lands in an `@`-imported file); the `memnyx-guardian` agent backstops external PRs (pillar walk); the maintainer decides which rule loses its slot; the executing skill drafts the compression. No skill displaces a rule on its own judgment.
+
 ## SKILL.md (per skill)
 
 | Severity | Tokens | Rationale |

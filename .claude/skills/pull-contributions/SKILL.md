@@ -51,7 +51,7 @@ You are integrating generalized contributions from a project into Memnyx. This s
 
    - **skill-update**: Read the target skill file, apply the recommended changes, show the diff to the user for approval before writing.
    - **new-skill**: Create the new skill directory and SKILL.md. Show the content for approval.
-   - **convention**: Add to the relevant section of CLAUDE.md or `.claude/docs/conventions.md`.
+   - **convention**: Add to the relevant section of CLAUDE.md or `.claude/docs/conventions.md`. **Budget gate for always-loaded targets:** if the target is a file CLAUDE.md `@`-imports (e.g. `.claude/docs/agent-guardrails.md`), measure it first (tokens ≈ bytes/4) against the always-loaded thresholds in `.claude/skills/finance-controller/references/thresholds.md`. At yellow (>2,000 tokens) or above, the addition is zero-sum: draft a displacement or condensation of at least the addition's size in the same change, and let the user decide which rule loses its slot. Safety rules (production read-only, secrets handling, and similar) are exempt from displacement and may land at yellow — flag the overage instead, so compression rebalances among style and process rules.
    - **memory-template**: Update the memory file templates (MEMORY.md, lessons-learned.md, etc.).
    - **docs**: Update the target doc file.
    - **config**: Update the target config file. Be extra careful with `.mcp.json` and `settings.json`.
