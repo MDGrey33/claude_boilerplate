@@ -19,6 +19,23 @@ Optimize for cache-friendliness too: stable prefixes hit the 5-minute Anthropic 
 
 Tuning: recent Claude models are more proactive than older ones. Instructions that say "ALWAYS / CRITICAL / MUST" now cause over-triggering. Prefer "Use X when Y."
 
+## Always-loaded `@`-imports (per file)
+
+Files that CLAUDE.md `@`-imports (the workspace memory index, `agent-guardrails.md`) load on every session start, in every workspace they are deployed to. They are the most expensive bytes in the setup and they only ever grow: each individual addition is justifiable in isolation, so without a cap the file ratchets upward.
+
+| Severity | Tokens | Rationale |
+|---|---|---|
+| 🟢 Green | ≤ 2,000 | Comfortable always-loaded cost per file |
+| 🟡 Yellow | ≤ 2,500 | Zero-sum zone — see rule below |
+| 🟠 Orange | ≤ 3,000 | Trim this cycle; rules are diluting each other's weight |
+| 🔴 Red | > 3,000 | Attention dilution — twenty rules each get less weight than eight |
+
+**Zero-sum rule:** at Yellow or above, a new rule lands only if an existing rule is removed or the file is condensed by at least the addition's size. This changes the question from "is this rule good?" (almost always yes) to "is it better than the weakest rule already in the file?" — the correct economics for always-loaded context. The cap also forces compression, and compressed rules are usually better rules.
+
+**Safety exemption:** rules that prevent irreversible harm (production read-only, secrets-to-keystore, and similar) are never displacement candidates, and a new safety rule may land at Yellow without displacing anything. The overage still gets flagged — compression then rebalances among style and process rules only. Budget pressure should never be the reason a safety rule is absent.
+
+**Who does what:** `finance-controller` detects (this audit); `pull-contributions` enforces at the entry point (its budget gate fires before a convention lands in an `@`-imported file); the `memnyx-guardian` agent backstops external PRs (pillar walk); the maintainer decides which rule loses its slot; the executing skill drafts the compression. No skill displaces a rule on its own judgment.
+
 ## SKILL.md (per skill)
 
 | Severity | Tokens | Rationale |
