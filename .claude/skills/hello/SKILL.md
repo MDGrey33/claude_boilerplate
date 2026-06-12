@@ -105,6 +105,8 @@ Read in parallel; skip silently if missing:
 
 List `<workspace>/projects/<slug>/workstreams/*.md` (read on demand at step 11).
 
+**These reads are load-bearing beyond memory.** Reading a file under `<workspace>/projects/<slug>/` triggers Claude Code's on-demand discovery of that project's `.claude/skills/`, registering them as invocable skills (autocomplete included) for the rest of the session. Do not replace these reads with cached or pre-aggregated content — the discovery side effect is part of this step's contract. Discovery covers the skills format only; legacy `.claude/commands/` files in a project never register this way (they load when the session starts in that project, or via an explicit `--add-dir`/`/add-dir` — never on-demand).
+
 For workspace-level scope, the equivalents at `<workspace>/.claude/memory/` are already loaded in step 3; just list `<workspace>/workstreams/*.md`.
 
 Session narrative for the active workstream loads after workstream resolution at step 11.
@@ -223,10 +225,13 @@ Open items in this scope:
   <workstream-2>:
     - <item>
 
+Project skills: <names discovered from the project's .claude/skills/, or omit the line>
 Marker: <relative path>
 ```
 
 Open items are listed grouped by workstream — never flat, never all attributed to the active workstream. Cross-reference each `workstreams/*.md` file in the active scope to build the list.
+
+The "Project skills" line surfaces what step 9's discovery side effect made invocable — list the skill names from the active project's `.claude/skills/` so the user knows they can type them. Omit the line entirely when the project ships none.
 
 If step 12 left an unrescued prior marker on this workstream (the user picked "Fresh" or didn't resume one of multiple candidates), surface it after the open-items list with its full path so the user can decide what to do with it. Do not act on it automatically.
 
