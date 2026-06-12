@@ -11,6 +11,15 @@ You are helping the user get cognee-mcp running on this machine. Walk through se
 
 **Important**: The cognee MCP server runs from a local clone of the cognee repo (the `cognee-mcp/` subdirectory) or via the Docker image `cognee/cognee-mcp:main`. There is no PyPI package — do not attempt `uvx`, `pip install`, or any package-manager-based installation.
 
+## Model Selection
+
+See `.claude/skills/_shared/MODEL_SELECTION.md` (in your workspace) for full policy.
+
+- **Default model:** Sonnet — interactive setup is judgment work: provider trade-offs, failure diagnosis, reading installed source for moved import paths
+- **Deterministic parts:** environment detection, Keychain existence checks, the stdio probe, `.env` regeneration — scripts, not LLM calls
+- **Promote to Opus when:** never — no decision in this skill is architectural
+- **Demote to Haiku when:** never — a wrong setup decision cascades into a silently broken memory stack (the 3072-dim embedding fallback is the canonical example)
+
 ## Configuration model
 
 Two config files are involved:
@@ -20,6 +29,8 @@ Two config files are involved:
 
 `.env` carries a header marking it as generated. Users edit `.mcp.json` and re-run `/setup-cognee --refresh-setup` to propagate.
 
+**The API key is the one value that lives in NEITHER file** (macOS). It's a Keychain generic password (service `claude-cognee-llm`); a launcher script `cognee-mcp/run-server.sh` fetches it at spawn time, exports `LLM_API_KEY`, and execs the venv python. `.mcp.json`'s `command` points at the launcher, not the python binary. The absence from `.env` is load-bearing, not cosmetic: because of `load_dotenv(override=True)`, any `LLM_API_KEY=` line in `.env` — even a stale one — silently beats the Keychain value. On non-macOS (no `security` CLI), fall back to the literal key in both files and say so to the user. The skill assumes one cognee setup per machine; a second setup against a different key needs its own service name and launcher.
+
 **Probe isolation**: when the graph DB is the default file-based Ladybug, the in-session cognee MCP holds an exclusive lock on `<SYSTEM_ROOT>/databases/cognee_graph_ladybug` from Claude Code session boot. Verification probes must override `SYSTEM_ROOT_DIRECTORY` to a temp dir to avoid contention; `DATA_ROOT_DIRECTORY` gets overridden alongside for cleanliness — not lock-avoidance — so probe markers don't pollute the user's data. With a remote graph DB (Neo4j), no lock contention; isolation is still cleaner.
 
 ## Verification modes
@@ -28,7 +39,7 @@ Three layers, each covers different ground:
 
 1. **`/setup-cognee --refresh-setup`** — re-syncs deps, provider extras, `.env`, then runs an end-to-end stdio probe against isolated data dirs. Covers everything post-install: dependency drift, provider extras after a `git pull`, `.env` drift, runtime config correctness.
 2. **`/mcp-doctor`** (session mode) — confirms cognee tools surface in-session after a Claude Code restart. Covers MCP-server-load only.
-3. **Fresh tear-down + reinstall** (manual) — `rm -rf <cognee-mcp>/.venv <DATA_ROOT> <SYSTEM_ROOT>`, then `/setup-cognee`. Covers the install path itself (clone, initial `.mcp.json` write, interactive prompts). Run after major cognee version bumps or whenever this skill is edited. Not automated — the install is interactive.
+3. **Fresh tear-down + reinstall** (manual) — `rm -rf <cognee-mcp>/.venv <DATA_ROOT> <SYSTEM_ROOT>`, then `/setup-cognee`. Covers the install path itself (clone, initial `.mcp.json` write, interactive prompts). Run after major cognee version bumps or whenever this skill is edited. Not automated — the install is interactive. Check for live cognee server processes before deleting: other sessions' servers hold the Ladybug lock and open handles on these dirs, and a running server outlives the deletion of its own interpreter binary — a broken-looking install can still have live processes. Stop them first; they reconnect through the fresh install.
 
 ## --refresh-setup mode
 
@@ -36,7 +47,7 @@ Run after a cognee-mcp `git pull` or `.mcp.json` edit. Three things drift indepe
 
 - **Lockfile vs installed deps — and cognee itself.** `uv sync` restores whatever the repo's lockfile pins. Upstream cognee fixes ship to PyPI ahead of the committed lockfile (the AnthropicAdapter `max_tokens` bug in cognee <1.1.0 was the canonical case). Record the currently installed cognee version first so the rollback gate (below) has something to pin back to. Advance cognee with `uv sync --upgrade-package cognee`; fall back to the lockfile version on resolution or network failure.
 - **Provider extras.** `uv add` writes to `pyproject.toml`, which a `git pull` may overwrite. Re-apply the extras declared in `.mcp.json` (`LLM_PROVIDER`, `EMBEDDING_PROVIDER`). After each change, run an import-check rollback gate: if the configured provider's adapter no longer imports, pin cognee back to the pre-upgrade version. Read installed cognee source for the import path — cognee reorganises these between versions.
-- **`.env` vs `.mcp.json`.** Cognee's `__init__.py` calls `dotenv.load_dotenv(override=True)`, so a stale `.env` silently wins over the env Claude Code provides. Compare, and strict-regenerate from `.mcp.json` on any drift — values OR a missing generated-artifact header.
+- **`.env` vs `.mcp.json`.** Cognee's `__init__.py` calls `dotenv.load_dotenv(override=True)`, so a stale `.env` silently wins over the env Claude Code provides. Compare, and strict-regenerate from `.mcp.json` on any drift — values OR a missing generated-artifact header. On macOS, regeneration must NOT reintroduce an `LLM_API_KEY` line (the key is Keychain-injected by the launcher; a line here would override it) — and the refresh also re-verifies the Keychain path: item retrievable by exit code (`security find-generic-password -s claude-cognee-llm -w >/dev/null`), launcher present and executable, `.mcp.json` `command` pointing at it.
 
 Then exercise the install end-to-end via the stdio probe (see Step 5 Phase 1) — with `SYSTEM_ROOT_DIRECTORY` (and `DATA_ROOT_DIRECTORY` for cleanliness) overridden to a temp dir so it doesn't contend with the in-session cognee's Ladybug lock. Validate the real `DATA_ROOT_DIRECTORY` / `SYSTEM_ROOT_DIRECTORY` from `.mcp.json` separately with a writability check — no subprocess needed.
 
@@ -48,6 +59,8 @@ Common failure modes:
 - `ModuleNotFoundError: <provider>` — provider extra not installed; re-apply it.
 - `Field required ... data` — schema mismatch; the probe is hardcoding param names instead of reading the input schema.
 - `IO exception: Could not set lock on file ... cognee_graph_ladybug` — `SYSTEM_ROOT_DIRECTORY` override didn't apply for the probe.
+- `run-server.sh: failed to read claude-cognee-llm from Keychain` — item missing or renamed; re-add via Step 3b.
+- LLM auth errors (401/invalid key) despite a valid Keychain item — an `LLM_API_KEY=` line crept back into `.env` and is overriding the launcher; regenerate `.env`.
 
 ## Step 0: Check latest documentation
 
@@ -59,7 +72,7 @@ Detect what's available:
 - OS and platform (affects Docker host address, shell profile path)
 - Available tools: `git`, `python3` (3.10–3.13 — cognee deps have no wheels for 3.14 yet), `uv`, `docker`, `docker compose`
 - Current shell (from `$SHELL`)
-- Whether `LLM_API_KEY` is already set
+- Whether the Keychain item `claude-cognee-llm` already exists (macOS — check exit code only, never print); whether `LLM_API_KEY` is already set in the environment (fallback path)
 - Whether port 5432 is in use (Postgres backend only)
 - Whether cognee is already cloned (`~/cognee`, project-relative)
 - Whether `.mcp.json` and `cognee-mcp/.env` already exist, and what's in them
@@ -114,9 +127,17 @@ LLM and embedding providers are independent — the LLM choice does NOT configur
 
 ## Step 3b: API key
 
-If `$LLM_API_KEY`, `$OPENAI_API_KEY`, or `$ANTHROPIC_API_KEY` is already set in the user's environment, show a masked version (first 4 + last 4 chars) and confirm. Otherwise ask for the key in a dedicated prompt.
+**macOS (default path): the key goes into the Keychain, never into a file.** Have the user store it themselves so it never transits the conversation or shell history — with `-w` and no value, `security` prompts interactively:
 
-**Use the literal key value in `.mcp.json` and `.env`** — Claude Code does not expand shell variables like `${LLM_API_KEY}`. Also instruct the user to persist the key in their shell profile (`~/.zshrc`, `~/.bashrc`, `~/.bash_profile`, or fish config depending on `$SHELL`) so it's available to terminal sessions.
+```bash
+security add-generic-password -U -a "$USER" -s claude-cognee-llm -w
+```
+
+(`-U` makes the same command serve both first-time add and rotation.) Verify retrievability by exit code only — `security find-generic-password -s claude-cognee-llm -w >/dev/null` — never print the value. Items created by the `security` CLI are readable by it without a GUI prompt, so the launcher works headless.
+
+A placeholder key (Ollama) doesn't warrant the Keychain — use the literal placeholder.
+
+**Non-macOS fallback:** if `$LLM_API_KEY`, `$OPENAI_API_KEY`, or `$ANTHROPIC_API_KEY` is already set in the user's environment, show a masked version (first 4 + last 4 chars) and confirm; otherwise ask for the key in a dedicated prompt. Use the literal value in `.mcp.json` and `.env`. (Claude Code does support `${VAR}` expansion in `.mcp.json`, but it expands from Claude Code's own launch environment — empty of shell exports under GUI launches, and visible to every child process when present — so don't route the key through it.) Tell the user the key is stored in plaintext on disk. Don't advise persisting it in the shell profile; that puts it in every process's environment.
 
 ## Step 3c: Choose embedding provider
 
@@ -155,7 +176,7 @@ Each backend defines goals. Achieve each using the tools and paths from Step 1 a
 
 **Goal 2: Clone cognee repo.** Suggest `~/cognee` if not already cloned. Repo: `https://github.com/topoteretes/cognee.git`.
 
-**Goal 3a: Run `uv sync` in `cognee-mcp/`.** Cognee-mcp's `pyproject.toml` declares only a Python floor; the real upper bound is set transitively by deps with narrow ABI wheels. On a "no wheel for cpXY" failure, retry with `--python <version>` picking the highest installed Python whose minor sits inside the supported ABI set.
+**Goal 3a: Run `uv sync` in `cognee-mcp/`.** Cognee-mcp's `pyproject.toml` declares only a Python floor; the real upper bound is set transitively by deps with narrow ABI wheels. On a "no wheel for cpXY" failure, retry with `--python <version>` picking the highest installed Python whose minor sits inside the supported ABI set. Prefer a uv-managed interpreter (`uv python install <ver>`, then `uv sync --python <ver>`) over a Homebrew Python — brew upgrades delete superseded interpreters and dangle every venv symlinked to them.
 
 **Goal 3b: Provider extras.** Run `uv add <package>` for each declared provider that's an optional cognee extra:
 - `anthropic` for `LLM_PROVIDER=anthropic`
@@ -164,13 +185,31 @@ Each backend defines goals. Achieve each using the tools and paths from Step 1 a
 
 Note: `uv add` writes to `pyproject.toml`; a future `git pull` may overwrite it. Use `/setup-cognee --refresh-setup` after any update.
 
-**Goal 4: Write `.mcp.json`.** Create the `mcpServers.cognee` entry (or merge if `.mcp.json` already has other servers). Create the data dirs from Step 3d if they don't exist.
+**Goal 4: Write the launcher and `.mcp.json`.** Create the `mcpServers.cognee` entry (or merge if `.mcp.json` already has other servers). Create the data dirs from Step 3d if they don't exist.
 
-- Literal values everywhere — Claude Code does not expand `${VAR}` or `$HOME`.
+On macOS, first write `cognee-mcp/run-server.sh` (mode +x):
+
+```sh
+#!/bin/sh
+# LLM_API_KEY is intentionally absent from .env and .mcp.json — cognee's
+# load_dotenv(override=True) means a value there would silently win over this one.
+export LLM_API_KEY="$(security find-generic-password -s claude-cognee-llm -w)"
+if [ -z "$LLM_API_KEY" ]; then
+  echo "run-server.sh: failed to read claude-cognee-llm from Keychain" >&2
+  exit 1
+fi
+exec <cognee-mcp>/.venv/bin/python <cognee-mcp>/src/server.py
+```
+
+The fail-loud guard matters: without it, a missing Keychain item starts cognee with an empty key and surfaces later as an opaque LLM auth error instead of at spawn.
+
+`.mcp.json` rules:
+
+- `command` is the launcher script on macOS (`args: []`); the venv python + `src/server.py` directly on non-macOS.
+- Literal values everywhere. Claude Code does expand `${VAR}` in `.mcp.json`, but only from its own launch environment — unreliable under GUI launches — so don't depend on it; `~` is never expanded.
 - Resolved absolute paths — no `~` or relative paths.
-- The actual API key from Step 3b in the env block.
 - Env block:
-  - LLM: `LLM_PROVIDER`, `LLM_MODEL`, `LLM_API_KEY`
+  - LLM: `LLM_PROVIDER`, `LLM_MODEL` — and `LLM_API_KEY` ONLY on the non-macOS fallback (macOS: Keychain via launcher, never here)
   - Embedding: `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, `EMBEDDING_MAX_TOKENS`
   - Storage: `DB_PROVIDER=sqlite`, `VECTOR_DB_PROVIDER=lancedb`, `GRAPH_DATABASE_PROVIDER=ladybug`
   - Data dirs: `DATA_ROOT_DIRECTORY`, `SYSTEM_ROOT_DIRECTORY`
@@ -187,7 +226,14 @@ Note: `uv add` writes to `pyproject.toml`; a future `git pull` may overwrite it.
 
 If `cognee-mcp/.env` already exists, replace it entirely. Custom env belongs in `.mcp.json`.
 
-**Goal 6: Add `.mcp.json` to `.gitignore`.** Contains secrets, machine-specific.
+On macOS, `.env` mirrors `.mcp.json` verbatim — which means it naturally contains no `LLM_API_KEY` line. Add this marker in its place so the gap reads as deliberate, not as an omission a future regeneration should "fix":
+
+```
+# LLM_API_KEY deliberately omitted — injected from Keychain (claude-cognee-llm)
+# by run-server.sh; a value here would override it via load_dotenv(override=True)
+```
+
+**Goal 6: Add `.mcp.json` to `.gitignore`.** Machine-specific paths; on the non-macOS fallback it also contains the secret.
 
 ### Postgres+Docker backend
 
@@ -207,7 +253,7 @@ Cognee v0.5.0+ defaults to multi-user access control (`ENABLE_BACKEND_ACCESS_CON
 
 Exercise the install through cognee's stdio interface end-to-end: connect, list tools (confirm `remember` / `recall` present), call `remember` with a unique probe-id, call `recall` querying for that id. **The probe-id must appear verbatim in the recall response** — that's the assertion; anything less is a partial pass.
 
-Pass through Claude Code's env explicitly (`env -i HOME=$HOME PATH=$PATH <vars from .mcp.json>`) so the child sees the same env it would see at session boot.
+Pass through Claude Code's env explicitly (`env -i HOME=$HOME PATH=$PATH <vars from .mcp.json>`) so the child sees the same env it would see at session boot. **Spawn the launcher (`run-server.sh`), not the venv python directly** — that exercises the Keychain fetch as part of the probe. The launcher only sets `LLM_API_KEY` and execs, so isolation overrides (`SYSTEM_ROOT_DIRECTORY` etc.) pass through it unchanged.
 
 **Schema-driven, not hardcoded.** Cognee renames tool input parameters across versions (`data` vs `information` for `remember`). Read the input schema and build the args from it.
 
@@ -233,6 +279,7 @@ Cognee Setup Complete
 Backend:           file-based / postgres+docker
 LLM:               <provider>/<model>
 Embedding:         <provider>/<model> (<dim>-dim)
+API key:           macOS Keychain (claude-cognee-llm) via run-server.sh / literal in config (non-macOS)
 Data dir:          <DATA_ROOT_DIRECTORY>
 Clone:             <path>
 .mcp.json:         updated
@@ -251,6 +298,8 @@ Notes:
   Subsequent calls amortise.
 - If fastembed: first call also downloads ~1.2GB to ~/.cache/fastembed/.
 - To change config: edit .mcp.json, then /setup-cognee --refresh-setup.
+- To rotate the API key (macOS): `security add-generic-password -U -a "$USER" -s claude-cognee-llm -w`
+  then restart Claude Code. No file edits.
 ```
 
 ## Ollama Configuration
