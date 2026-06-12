@@ -34,6 +34,7 @@ Keep the setup **financially optimal without quality loss**. Three levers, ranke
 
 Run `bash .claude/skills/finance-controller/scripts/audit.sh`. It produces a JSON report with:
 - CLAUDE.md byte count and token estimate
+- Every file CLAUDE.md `@`-imports (memory index, `agent-guardrails.md`): size and token estimate per file — these load on every session start
 - Every SKILL.md: size, token estimate, model-tier declared (or missing)
 - MCP servers configured + connected (via `claude mcp list`)
 - Flag list against thresholds in `references/thresholds.md`
@@ -60,6 +61,7 @@ Produce the report using the template at `references/report-template.md`. Each r
 | New skill to add | `skills-manager` ADD flow |
 | Skill to archive | `skills-manager` ARCHIVE flow |
 | CLAUDE.md edit | Present diff, ask the user for approval, then Edit |
+| `@`-imported doc trim (e.g. `agent-guardrails.md`) | In a workspace: stage via `contribute` — Memnyx owns these files and `sync` overwrites local edits. In the Memnyx source repo: present diff, ask the user. At Yellow or above, additions are zero-sum (see `references/thresholds.md`) |
 | MCP disable / project-local move | Present command, ask the user, then execute |
 | Model-tier annotation for a skill missing one | `skills-manager` UPDATE flow |
 
@@ -74,6 +76,7 @@ Append one line per applied recommendation to `.claude/memory/finance-controller
 | Surface | Green | Yellow | Orange | Red |
 |---|---|---|---|---|
 | CLAUDE.md | ≤3k tok | ≤5k tok | ≤8k tok | >8k |
+| `@`-imported file (one file) | ≤2k tok | ≤2.5k | ≤3k | >3k |
 | SKILL.md (one file) | ≤400 tok | ≤1.5k | ≤3k | >3k |
 | MCPs enabled | ≤5 | ≤8 | ≤12 | >12 |
 | Skill model-tier declared | 100% | 95% | 85% | <85% |

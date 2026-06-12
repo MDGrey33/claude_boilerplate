@@ -20,6 +20,28 @@ else
   cmd_tokens=0
 fi
 
+# ---------- Always-loaded @-imports (CLAUDE.md) ----------
+# Every file CLAUDE.md @-imports (memory index, agent-guardrails.md) loads on
+# every session start — measure each one against the always-loaded budget.
+imports_json="[]"
+if [[ -f "$CLAUDE_MD" ]]; then
+  claude_md_dir=$(cd "$(dirname "$CLAUDE_MD")" && pwd)
+  imports_json=$(
+    { grep -oE '(^|[[:space:]])@[A-Za-z0-9._~/-]+' "$CLAUDE_MD" 2>/dev/null || true; } \
+      | sed -E 's/^[[:space:]]*@//' | sort -u \
+      | while IFS= read -r rel; do
+          p="$rel"
+          [[ "$p" == "~/"* ]] && p="${HOME}/${p#\~/}"
+          [[ "$p" != /* ]] && p="$claude_md_dir/$p"
+          [[ -f "$p" ]] || continue
+          bytes=$(wc -c <"$p" | tr -d ' ')
+          tokens=$(bytes_to_tokens "$bytes")
+          jq -n --arg path "$rel" --argjson bytes "$bytes" --argjson tokens "$tokens" \
+            '{path:$path, bytes:$bytes, tokens:$tokens}'
+        done | jq -s '.'
+  )
+fi
+
 # ---------- Skills ----------
 skills_json="[]"
 if [[ -d "$SKILLS_DIR" ]]; then
@@ -74,6 +96,7 @@ mcp_connected=$(echo "$mcp_json" | jq '[.[] | select(.status=="connected")] | le
 flags=$(jq -n \
   --argjson cmd_tokens "$cmd_tokens" \
   --argjson skills "$skills_json" \
+  --argjson imports "$imports_json" \
   --argjson mcp_count "$mcp_count" \
   --argjson mcp_connected "$mcp_connected" '
   {
@@ -83,6 +106,12 @@ flags=$(jq -n \
       elif $cmd_tokens > 3000 then "yellow"
       else "green" end
     ),
+    always_loaded_imports: [ $imports[] | {path, tokens, severity: (
+      if   .tokens > 3000 then "red"
+      elif .tokens > 2500 then "orange"
+      elif .tokens > 2000 then "yellow"
+      else "green" end
+    )} ],
     mcps: (
       if   $mcp_connected > 12 then "red"
       elif $mcp_connected > 8  then "orange"
@@ -101,12 +130,14 @@ report=$(jq -n \
   --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --argjson cmd_bytes "$cmd_bytes" \
   --argjson cmd_tokens "$cmd_tokens" \
+  --argjson imports "$imports_json" \
   --argjson skills "$skills_json" \
   --argjson mcps "$mcp_json" \
   --argjson flags "$flags" '
   {
     generated_at: $generated_at,
     claude_md: {bytes:$cmd_bytes, tokens:$cmd_tokens},
+    always_loaded_imports: $imports,
     skills: $skills,
     mcps: $mcps,
     flags: $flags
