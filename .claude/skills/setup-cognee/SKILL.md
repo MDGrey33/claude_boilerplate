@@ -39,7 +39,7 @@ Three layers, each covers different ground:
 
 1. **`/setup-cognee --refresh-setup`** — re-syncs deps, provider extras, `.env`, then runs an end-to-end stdio probe against isolated data dirs. Covers everything post-install: dependency drift, provider extras after a `git pull`, `.env` drift, runtime config correctness.
 2. **`/mcp-doctor`** (session mode) — confirms cognee tools surface in-session after a Claude Code restart. Covers MCP-server-load only.
-3. **Fresh tear-down + reinstall** (manual) — `rm -rf <cognee-mcp>/.venv <DATA_ROOT> <SYSTEM_ROOT>`, then `/setup-cognee`. Covers the install path itself (clone, initial `.mcp.json` write, interactive prompts). Run after major cognee version bumps or whenever this skill is edited. Not automated — the install is interactive.
+3. **Fresh tear-down + reinstall** (manual) — `rm -rf <cognee-mcp>/.venv <DATA_ROOT> <SYSTEM_ROOT>`, then `/setup-cognee`. Covers the install path itself (clone, initial `.mcp.json` write, interactive prompts). Run after major cognee version bumps or whenever this skill is edited. Not automated — the install is interactive. Check for live cognee server processes before deleting: other sessions' servers hold the Ladybug lock and open handles on these dirs, and a running server outlives the deletion of its own interpreter binary — a broken-looking install can still have live processes. Stop them first; they reconnect through the fresh install.
 
 ## --refresh-setup mode
 
