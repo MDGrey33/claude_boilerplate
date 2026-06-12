@@ -79,6 +79,8 @@ Project codenames and internal references that shouldn't leak to boilerplate. Ma
 - Internal agent codenames — only when referenced outside their project directory
 - Internal ritual or stylistic terms — flag in boilerplate mode
 
+Before flagging — whether from a denylist match or the judgment pass — check `allowlist-context.txt`: terms listed there are ones the destination repo legitimately contains (e.g. the org's own name inside the org's private fork) and are not findings. Suppression is visible, never silent: report the suppressed-match count in the summary so a reviewer preparing content for a *different* destination (upstream, public) can see what the allowlist absorbed.
+
 ### 4. TONE
 Reputation-risk content. LLM judgment pass over every flagged or questionable paragraph:
 - Profanity and crude language
@@ -99,7 +101,7 @@ For every input file:
 2. Run each category's detector:
    - SECRET: regex from `secret-patterns.txt` + contextual secondary check
    - PII: regex + allowlist lookup
-   - PRIVATE_CONTEXT: denylist substring match (word-boundary), mode-gated
+   - PRIVATE_CONTEXT: denylist substring match (word-boundary), mode-gated; suppress matches listed in `allowlist-context.txt` (applies to the judgment pass too)
    - TONE: LLM pass on suspicious paragraphs (flagged words `stupid`, `hate`, `idiot`, `[company] is`, etc.) — or full-file pass when model is Sonnet+
 3. Collect findings: `{file, line, category, excerpt, suggested_replacement, confidence}`.
 4. Write a report to the project's `.claude/contributions/sanitizer-report-<YYYY-MM-DD-HHMM>.md` (or `/tmp/sanitizer-report-...` if no `.claude/` dir exists).
@@ -117,7 +119,7 @@ Report format:
 ## Summary
 - SECRET: 2 findings
 - PII: 5 findings
-- PRIVATE_CONTEXT: 11 findings
+- PRIVATE_CONTEXT: 11 findings (allowlist-context suppressed: 2)
 - TONE: 1 finding
 
 ## Findings
@@ -192,18 +194,19 @@ Blocks pull if exit code ≠ 0.
 
 ## Allowlists and Denylists
 
-Three data files live next to this SKILL.md:
+Four data files live next to this SKILL.md:
 
 - `secret-patterns.txt` — regex set, one per line, comment lines start with `#`. Seeded from detect-secrets, gitleaks, and trufflehog common patterns. Add user-specific patterns as discovered.
 - `denylist-names.txt` — project codenames to strip, one per line. Stripped only in `--mode=boilerplate` and `--mode=public`. Populate per-user.
 - `allowlist-identity.txt` — the user's public identity: name variants, GitHub handle, public email. Matches here are NEVER flagged. Populate per-user.
+- `allowlist-context.txt` — context terms the destination repo legitimately contains (e.g. the org's own name inside the org's private fork). Suppresses PRIVATE_CONTEXT findings only — secrets and PII are never allowlisted here. Entries do not make a term safe for an external upstream or public repo; see the scope warning in the file. Populate per-deployment.
 
 Update these files directly when new patterns/names are discovered. Changes take effect on next invocation.
 
 ## What You NEVER Do
 
 - ❌ Edit a file without a prior detect-phase report approved by the user
-- ❌ Strip matches from `allowlist-identity.txt`
+- ❌ Strip matches from `allowlist-identity.txt` or `allowlist-context.txt` — allowlisted terms are never findings and never redacted
 - ❌ Run TONE detection in `--check` mode without Sonnet+ (regex tone detection produces false positives; skip or downgrade to word-flag only)
 - ❌ Scan files in `_archive/`, `node_modules/`, `.git/`, `venv/`, `.venv/`, or `__pycache__/`
 - ❌ Follow symlinks outside the input root

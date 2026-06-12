@@ -1,0 +1,16 @@
+# Context terms the destination repo legitimately contains — matches here are
+# NOT flagged as PRIVATE_CONTEXT (denylist match or judgment pass).
+# One entry per line. Case-insensitive match on word boundaries. Comments start with #.
+#
+# Use this for terms that are private-context in general but allowed in THIS
+# deployment's destination — e.g. the org's own name inside the org's private
+# fork of the boilerplate.
+#
+# SCOPE WARNING: entries here only describe what this deployment and its
+# workspaces may contain. They do NOT make the term safe for an external
+# upstream or public repo — an upstream pull is gated by the upstream repo's
+# own sanitizer copy, which does not carry these entries. Review this list
+# before syncing the sanitizer itself to any external destination.
+#
+# ── Populate below ──
+# (empty in boilerplate — populate per deployment)
