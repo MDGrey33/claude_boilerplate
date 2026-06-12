@@ -19,7 +19,7 @@ You are integrating generalized contributions from a project into Memnyx. This s
 
 ## Steps
 
-1. **Locate contributions**: The user provides the path to `<workspace>/contributions/` (e.g., `~/workspace/contributions/`). Read all `.md` files in that folder **that do not start with `integrated-`**. Files with the `integrated-` prefix have already been processed — skip them silently.
+1. **Locate contributions**: The user provides the path to `<workspace>/contributions/` (e.g., `~/workspace/contributions/`). Read all `.md` files in that folder **that do not start with `integrated-` or `skipped-`**. Files with the `integrated-` prefix have already been applied; files with the `skipped-` prefix were reviewed and rejected — skip both silently. `sanitizer-report-*.md` files are scan reports, not contributions — skip those too.
 
    If no path is provided, ask the user for it.
 
@@ -59,7 +59,7 @@ You are integrating generalized contributions from a project into Memnyx. This s
 5. **Always ask for approval** before writing any changes. Show exact diffs or new content.
 
 6. **After integration**, ask: "Should I mark the processed contributions as integrated?"
-   - If yes, rename the contribution files to add an `integrated-` prefix (e.g., `integrated-2025-06-15-improve-hello-mcp-retry.md`). This prevents re-processing.
+   - If yes, rename applied contribution files to add an `integrated-` prefix (e.g., `integrated-2025-06-15-improve-hello-mcp-retry.md`), and contributions the user reviewed and rejected to add a `skipped-` prefix. Both prevent re-processing on future runs.
 
 7. **Update CLAUDE.md** if new skills were added (add to the skills table).
 
